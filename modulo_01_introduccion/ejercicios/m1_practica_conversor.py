@@ -5,6 +5,7 @@ Lee el enunciado en PRACTICA_1.md.
 
 KM_POR_MILLA = 1.609344
 KG_POR_LIBRA = 0.45359237
+METROS_POR_PIE = 0.3048
 
 
 def celsius_a_fahrenheit(grados):
@@ -37,6 +38,11 @@ def libras_a_kg(libras):
     return libras * KG_POR_LIBRA
 
 
+def metros_a_pies(metros):
+    """Convierte metros a pies."""
+    return metros / METROS_POR_PIE
+
+
 def formatear(valor, unidad_origen, resultado, unidad_destino):
     """Devuelve el texto de la conversión con dos decimales.
 
@@ -54,16 +60,25 @@ OPCIONES = {
     "4": ("Millas a kilómetros", millas_a_km, "mi", "km"),
     "5": ("Kilogramos a libras", kg_a_libras, "kg", "lb"),
     "6": ("Libras a kilogramos", libras_a_kg, "lb", "kg"),
+    "7": ("Metros a pies", metros_a_pies, "m", "ft"),
 }
+OPCION_SALIR = "0"
 
 
-def main():
-    """Muestra el menú, pide los datos e imprime el resultado."""
+def mostrar_menu(con_salida=False):
+    """Imprime el menú de conversiones y, si se pide, la opción de salir."""
     print("Conversor de unidades")
     for clave, (texto, _, _, _) in OPCIONES.items():
         print(f"{clave}. {texto}")
-    opcion = input("Elige una opción (1-6): ").strip()
+    if con_salida:
+        print(f"{OPCION_SALIR}. Salir")
 
+
+def procesar_opcion(opcion):
+    """Pide el valor e imprime la conversión de ``opcion``.
+
+    Si la opción no existe, imprime "Opción no válida" sin pedir el valor.
+    """
     if opcion not in OPCIONES:
         print("Opción no válida")
         return
@@ -73,5 +88,24 @@ def main():
     print(formatear(valor, origen, convertir(valor), destino))
 
 
+def main():
+    """Muestra el menú, pide los datos e imprime el resultado una vez."""
+    mostrar_menu()
+    opcion = input(f"Elige una opción (1-{len(OPCIONES)}): ").strip()
+    procesar_opcion(opcion)
+
+
+def main_repetido():
+    """Repite el menú hasta que el usuario elija 0 para salir."""
+    while True:
+        mostrar_menu(con_salida=True)
+        opcion = input(f"Elige una opción (0-{len(OPCIONES)}): ").strip()
+        if opcion == OPCION_SALIR:
+            print("¡Hasta luego!")
+            break
+        procesar_opcion(opcion)
+        print()
+
+
 if __name__ == "__main__":
-    main()
+    main_repetido()
