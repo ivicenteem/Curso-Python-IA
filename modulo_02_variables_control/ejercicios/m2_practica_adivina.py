@@ -16,7 +16,12 @@ def evaluar_intento(secreto: int, intento: int) -> str:
     >>> evaluar_intento(50, 30)
     'mayor'
     """
-    raise NotImplementedError
+    if intento == secreto:
+        return "acierto"
+    elif secreto > intento:
+        return "mayor"
+    else:
+        return "menor"
 
 
 def es_intento_valido(texto: str) -> bool:
@@ -25,7 +30,8 @@ def es_intento_valido(texto: str) -> bool:
     >>> es_intento_valido("50"), es_intento_valido("abc"), es_intento_valido("101")
     (True, False, False)
     """
-    raise NotImplementedError
+    limpio = texto.strip()
+    return limpio.isdecimal() and MINIMO <= int(limpio) <= MAXIMO
 
 
 def jugar(secreto: int, max_intentos: int = MAX_INTENTOS) -> bool:
@@ -34,12 +40,29 @@ def jugar(secreto: int, max_intentos: int = MAX_INTENTOS) -> bool:
     En cada turno pide un número con input(). Una entrada no válida no
     consume intento. Tras cada intento fallido imprime una pista.
     """
-    raise NotImplementedError
+    intento = 1
+    while intento <= max_intentos:
+        texto = input(f"Intento {intento} de {max_intentos}: ")
+        if not es_intento_valido(texto):
+            print(f"Escribe un número entre {MINIMO} y {MAXIMO}.")
+            continue
+
+        resultado = evaluar_intento(secreto, int(texto))
+        if resultado == "acierto":
+            print(f"¡Correcto! Lo has adivinado en {intento} intentos.")
+            return True
+        print(f"El número secreto es {resultado}.")
+        intento += 1
+
+    print(f"Has agotado los intentos. El número era {secreto}.")
+    return False
 
 
 def main() -> None:
     """Genera un número secreto al azar y lanza una partida."""
-    raise NotImplementedError
+    print(f"He pensado un número entre {MINIMO} y {MAXIMO}.")
+    secreto = random.randint(MINIMO, MAXIMO)
+    jugar(secreto)
 
 
 if __name__ == "__main__":
