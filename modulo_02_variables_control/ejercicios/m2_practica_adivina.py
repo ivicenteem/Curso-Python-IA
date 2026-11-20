@@ -1,4 +1,7 @@
-"""Módulo 2 - Práctica 2, parte A: adivina el número."""
+"""Módulo 2 - Práctica 2, parte A: adivina el número.
+
+Hecho con ayuda de IA.
+"""
 
 import random
 

@@ -1,4 +1,7 @@
-"""Módulo 2 - Práctica 2, parte B: calculadora de nómina."""
+"""Módulo 2 - Práctica 2, parte B: calculadora de nómina.
+
+Hecho con ayuda de IA.
+"""
 
 SEGURIDAD_SOCIAL = 6.35  # % de cotización del trabajador
 PAGAS = 12
