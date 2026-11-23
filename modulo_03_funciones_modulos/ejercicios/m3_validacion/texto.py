@@ -11,7 +11,10 @@ def esta_vacio(texto: str | None) -> bool:
     >>> esta_vacio(" a ")
     False
     """
-    raise NotImplementedError
+    if texto is None:          # 1. None no tiene .strip(): hay que mirarlo antes
+        return True
+    return texto.strip() == ""  # 2. Quita espacios, tabuladores y saltos de línea;
+                                #    si no queda nada, está vacío
 
 
 def normalizar_nombre(nombre: str) -> str:
@@ -20,7 +23,11 @@ def normalizar_nombre(nombre: str) -> str:
     >>> normalizar_nombre("  ada   LOVELACE ")
     'Ada Lovelace'
     """
-    raise NotImplementedError
+    palabras = nombre.split()           # 1. Parte por cualquier cantidad de espacios
+                                        #    "  ada   LOVELACE " -> ["ada", "LOVELACE"]
+    return " ".join(palabras).title()   # 2. Une con un solo espacio: "ada LOVELACE"
+                                        # 3. .title() pone la inicial de cada palabra en
+                                        #    mayúscula y el resto en minúscula: "Ada Lovelace"
 
 
 def es_email(texto: str) -> bool:
@@ -35,7 +42,12 @@ def es_email(texto: str) -> bool:
     >>> es_email("ada@ejemplo")
     False
     """
-    raise NotImplementedError
+    if " " in texto or texto.count("@") != 1:
+        return False
+    usuario, dominio = texto.split("@")
+    if not usuario:
+        return False
+    return "." in dominio and not dominio.startswith(".") and not dominio.endswith(".")
 
 
 def es_dni(texto: str) -> bool:
@@ -50,4 +62,10 @@ def es_dni(texto: str) -> bool:
     >>> es_dni("12345678A")
     False
     """
-    raise NotImplementedError
+    limpio = texto.strip().upper()
+    if len(limpio) != 9:
+        return False
+    numero, letra = limpio[:8], limpio[8]
+    if not numero.isdecimal():
+        return False
+    return LETRAS_DNI[int(numero) % 23] == letra

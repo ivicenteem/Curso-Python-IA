@@ -9,7 +9,7 @@ def potencia(base: float, exponente: float = 2) -> float:
     >>> potencia(2, 10)
     1024
     """
-    raise NotImplementedError
+    return base ** exponente
 
 
 def sumar_todos(*numeros: float) -> float:
@@ -20,7 +20,7 @@ def sumar_todos(*numeros: float) -> float:
     >>> sumar_todos()
     0
     """
-    raise NotImplementedError
+    return sum(numeros)
 
 
 def crear_usuario(nombre: str, *, activo: bool = True, **extras) -> dict:
@@ -35,8 +35,7 @@ def crear_usuario(nombre: str, *, activo: bool = True, **extras) -> dict:
     >>> crear_usuario("Ada", activo=False, rol="admin")
     {'nombre': 'Ada', 'activo': False, 'rol': 'admin'}
     """
-    raise NotImplementedError
-    # También vale en una línea: return {"nombre": nombre, "activo": activo, **extras}
+    return {"nombre": nombre, "activo": activo, **extras}
 
 
 def anadir_elemento(elemento, lista: list | None = None) -> list:
@@ -51,7 +50,12 @@ def anadir_elemento(elemento, lista: list | None = None) -> list:
     >>> anadir_elemento(3, [1, 2])
     [1, 2, 3]
     """
-    raise NotImplementedError
+    # Con lista=[] como valor por defecto, todas las llamadas compartirían
+    # la misma lista, porque se crea una sola vez al definir la función.
+    if lista is None:
+        lista = []
+    lista.append(elemento)
+    return lista
 
 
 def formatear_nombre(nombre: str, apellido: str, *, mayusculas: bool = False,
@@ -66,7 +70,10 @@ def formatear_nombre(nombre: str, apellido: str, *, mayusculas: bool = False,
     >>> formatear_nombre("Ada", "Lovelace", mayusculas=True, separador=", ")
     'ADA, LOVELACE'
     """
-    raise NotImplementedError
+    resultado = nombre.strip() + separador + apellido.strip()
+    if mayusculas:
+        resultado = resultado.upper()
+    return resultado
 
 
 def estadisticas(*numeros: float) -> tuple:
@@ -79,4 +86,8 @@ def estadisticas(*numeros: float) -> tuple:
     >>> estadisticas()
     (0, 0, None)
     """
-    raise NotImplementedError
+    if not numeros:
+        return 0, 0, None
+    cantidad = len(numeros)
+    suma = sum(numeros)
+    return cantidad, suma, round(suma / cantidad, 2)
