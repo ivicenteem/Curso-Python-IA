@@ -101,12 +101,15 @@ def evolucion_mensual(gimnasio: Gimnasio, meses: int = MESES_EVOLUCION,
     """Socios activos al empezar cada mes, bajas, tasa de abandono (%) y visitas.
 
     Abarca los ``meses`` meses que terminan en ``fecha`` (por defecto, la fecha
-    de referencia) y no cuenta nada posterior a ella. El índice es el primer
+    de referencia), sin los anteriores al primer dato, y no cuenta nada
+    posterior a ``fecha``. El índice es el primer
     día de cada mes. La tasa de abandono es el porcentaje de los activos al
     empezar el mes que se dieron de baja en él.
     """
     fecha = fecha or gimnasio.fecha_referencia
-    inicio_meses = pd.DatetimeIndex(primeros_de_mes(fecha, meses), name="mes")
+    primer_mes = pd.Timestamp(gimnasio.fecha_inicio.replace(day=1))
+    inicio_meses = pd.DatetimeIndex([mes for mes in primeros_de_mes(fecha, meses)
+                                     if pd.Timestamp(mes) >= primer_mes], name="mes")
     socios = tabla_socios(gimnasio)
     socios = socios.assign(fecha_baja=socios["fecha_baja"].where(
         socios["fecha_baja"] <= pd.Timestamp(fecha)))

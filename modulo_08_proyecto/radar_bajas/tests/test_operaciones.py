@@ -179,6 +179,12 @@ def test_evolucion_no_cuenta_nada_posterior_a_la_fecha(gimnasio):
     assert evolucion["visitas"].iloc[-1] == visitas
 
 
+def test_evolucion_no_incluye_meses_anteriores_a_los_datos(gimnasio):
+    evolucion = analisis.evolucion_mensual(gimnasio, fecha=date(2026, 6, 15))
+    assert evolucion.index[0] == pd.Timestamp(2025, 11, 1)
+    assert len(evolucion) == 8
+
+
 def test_acciones_hasta_deja_fuera_lo_que_aun_no_se_sabia():
     acciones = analisis.tabla_acciones([
         AccionRetencion(1, 1, "llamada", date(2026, 5, 1), "retenido", date(2026, 5, 20)),
