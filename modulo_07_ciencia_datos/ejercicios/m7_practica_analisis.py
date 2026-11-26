@@ -3,6 +3,8 @@
 Un pequeño proceso de análisis completo: cargar, limpiar, calcular indicadores,
 generar gráficos y exportar los resultados.
 
+La limpieza, las agregaciones y los gráficos reutilizan los ejercicios 3, 4 y 5.
+
 Uso:
 
     python m7_practica_analisis.py
@@ -10,17 +12,20 @@ Uso:
 
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pandas as pd
+
+from m7_ej3_limpieza import cargar_en_bruto, limpiar
+from m7_ej4_agrupacion import con_objetivos, importe_mensual, importe_por, resumen_por_vendedor
+from m7_ej5_graficos import grafico_barras, grafico_lineas, guardar
 
 DATOS = Path(__file__).resolve().parent.parent / "datos"
 SALIDA = Path(__file__).resolve().parent / "salida_practica_7"
-COLUMNAS_TEXTO = ["vendedor", "region", "producto", "categoria"]
+COLUMNAS_RANKING = ["vendedor", "ventas", "importe", "objetivo", "cumplimiento", "cumplido"]
 
 
 def cargar(ruta: str | Path) -> pd.DataFrame:
     """Lee el CSV de ventas con todas las columnas como texto."""
-    raise NotImplementedError
+    return cargar_en_bruto(ruta)
 
 
 def preparar(df: pd.DataFrame) -> pd.DataFrame:
@@ -40,7 +45,10 @@ def preparar(df: pd.DataFrame) -> pd.DataFrame:
 
     No modifica el DataFrame recibido.
     """
-    raise NotImplementedError
+    limpias = limpiar(df)
+    ordenadas = limpias.sort_values("fecha", kind="stable").reset_index(drop=True)
+    return ordenadas.assign(importe=ordenadas["unidades"] * ordenadas["precio"],
+                            mes=ordenadas["fecha"].dt.strftime("%Y-%m"))
 
 
 def indicadores(df: pd.DataFrame) -> dict:
@@ -55,7 +63,14 @@ def indicadores(df: pd.DataFrame) -> dict:
     - "mejor_mes": el mes "AAAA-MM" de mayor importe total.
     - "producto_mas_vendido": el de más unidades.
     """
-    raise NotImplementedError
+    return {
+        "ventas": len(df),
+        "importe_total": round(float(df["importe"].sum()), 2),
+        "ticket_medio": round(float(df["importe"].mean()), 2),
+        "mejor_vendedor": str(importe_por(df, "vendedor").idxmax()),
+        "mejor_mes": str(importe_por(df, "mes").idxmax()),
+        "producto_mas_vendido": str(df.groupby("producto")["unidades"].sum().idxmax()),
+    }
 
 
 def ranking_vendedores(df: pd.DataFrame, objetivos: pd.DataFrame) -> pd.DataFrame:
@@ -68,7 +83,8 @@ def ranking_vendedores(df: pd.DataFrame, objetivos: pd.DataFrame) -> pd.DataFram
 
     ``objetivos`` tiene las columnas vendedor y objetivo.
     """
-    raise NotImplementedError
+    ranking = con_objetivos(resumen_por_vendedor(df), objetivos).reset_index()
+    return ranking[COLUMNAS_RANKING].assign(importe=ranking["importe"].round(2))
 
 
 def evolucion_mensual(df: pd.DataFrame) -> pd.DataFrame:
@@ -78,7 +94,12 @@ def evolucion_mensual(df: pd.DataFrame) -> pd.DataFrame:
     porcentaje respecto al mes anterior, con un decimal; en el primer mes es
     un valor ausente. El índice va de 0 en adelante.
     """
-    raise NotImplementedError
+    mensual = importe_mensual(df)
+    return pd.DataFrame({
+        "mes": mensual.index,
+        "importe": mensual.round(2).to_numpy(),
+        "variacion": (100 * mensual.pct_change()).round(1).to_numpy(),
+    })
 
 
 def generar_graficos(df: pd.DataFrame, carpeta: str | Path) -> list[Path]:
@@ -90,7 +111,11 @@ def generar_graficos(df: pd.DataFrame, carpeta: str | Path) -> list[Path]:
     Crea la carpeta si no existe. Cada gráfico lleva título y etiqueta en el
     eje Y. Las figuras se cierran después de guardarlas.
     """
-    raise NotImplementedError
+    carpeta = Path(carpeta)
+    por_vendedor = grafico_barras(importe_por(df, "vendedor"), "Importe por vendedor")
+    mensual = grafico_lineas(importe_mensual(df), "Evolución mensual del importe")
+    return [guardar(por_vendedor, carpeta / "importe_por_vendedor.png"),
+            guardar(mensual, carpeta / "evolucion_mensual.png")]
 
 
 def exportar(tabla: pd.DataFrame, ruta: str | Path) -> None:
@@ -98,7 +123,9 @@ def exportar(tabla: pd.DataFrame, ruta: str | Path) -> None:
 
     Crea la carpeta de destino si no existe.
     """
-    raise NotImplementedError
+    ruta = Path(ruta)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    tabla.to_csv(ruta, index=False, encoding="utf-8")
 
 
 def main() -> None:

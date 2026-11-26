@@ -8,7 +8,26 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+
+TAMANO = (8, 4.5)
+TAMANO_PANEL = (13, 4.5)
+
+
+def _barras(ejes: Axes, serie: pd.Series, titulo: str, etiqueta_y: str) -> None:
+    """Dibuja en ``ejes`` una barra por elemento de la serie, con título y etiqueta del eje Y."""
+    ejes.bar(serie.index.astype(str), serie.to_numpy())
+    ejes.set_title(titulo)
+    ejes.set_ylabel(etiqueta_y)
+
+
+def _lineas(ejes: Axes, serie: pd.Series, titulo: str, etiqueta_y: str) -> None:
+    """Dibuja en ``ejes`` la serie como línea con marcadores, con título, etiqueta y rejilla."""
+    ejes.plot(serie.index.astype(str), serie.to_numpy(), marker="o")
+    ejes.set_title(titulo)
+    ejes.set_ylabel(etiqueta_y)
+    ejes.grid(True, alpha=0.4)
 
 
 def grafico_barras(serie: pd.Series, titulo: str, etiqueta_y: str = "Importe (€)") -> Figure:
@@ -17,7 +36,9 @@ def grafico_barras(serie: pd.Series, titulo: str, etiqueta_y: str = "Importe (�
     El eje X muestra el índice de la serie. La figura lleva el título y la
     etiqueta del eje Y indicados.
     """
-    raise NotImplementedError
+    figura, ejes = plt.subplots(figsize=TAMANO, layout="constrained")
+    _barras(ejes, serie, titulo, etiqueta_y)
+    return figura
 
 
 def grafico_lineas(serie: pd.Series, titulo: str, etiqueta_y: str = "Importe (€)") -> Figure:
@@ -26,12 +47,18 @@ def grafico_lineas(serie: pd.Series, titulo: str, etiqueta_y: str = "Importe (�
     Pensado para la evolución mensual: el índice de la serie va en el eje X.
     La figura lleva título, etiqueta del eje Y y rejilla.
     """
-    raise NotImplementedError
+    figura, ejes = plt.subplots(figsize=TAMANO, layout="constrained")
+    _lineas(ejes, serie, titulo, etiqueta_y)
+    return figura
 
 
 def histograma(valores, titulo: str, intervalos: int = 10) -> Figure:
     """Devuelve una figura con el histograma de los valores, con ``intervalos`` barras."""
-    raise NotImplementedError
+    figura, ejes = plt.subplots(figsize=TAMANO, layout="constrained")
+    ejes.hist(valores, bins=intervalos, edgecolor="white")
+    ejes.set_title(titulo)
+    ejes.set_ylabel("Frecuencia")
+    return figura
 
 
 def panel(por_vendedor: pd.Series, mensual: pd.Series, titulo: str) -> Figure:
@@ -41,7 +68,11 @@ def panel(por_vendedor: pd.Series, mensual: pd.Series, titulo: str) -> Figure:
     "Por vendedor". A la derecha, líneas con la evolución mensual, con el
     título "Evolución mensual". ``titulo`` es el título general de la figura.
     """
-    raise NotImplementedError
+    figura, (izquierda, derecha) = plt.subplots(1, 2, figsize=TAMANO_PANEL, layout="constrained")
+    _barras(izquierda, por_vendedor, "Por vendedor", "Importe (€)")
+    _lineas(derecha, mensual, "Evolución mensual", "Importe (€)")
+    figura.suptitle(titulo)
+    return figura
 
 
 def guardar(figura: Figure, ruta: str | Path) -> Path:
@@ -49,4 +80,8 @@ def guardar(figura: Figure, ruta: str | Path) -> Path:
 
     Crea la carpeta de destino si no existe.
     """
-    raise NotImplementedError
+    ruta = Path(ruta)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    figura.savefig(ruta, dpi=150)
+    plt.close(figura)
+    return ruta
