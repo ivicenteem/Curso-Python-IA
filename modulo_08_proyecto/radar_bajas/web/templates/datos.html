@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "componentes.html" import icono, tarjeta %}
+{% block titulo %}Datos{% endblock %}
+{% block encabezado %}Datos{% endblock %}
+{% block entradilla %}De dónde salen los datos que se analizan y cómo mantenerlos al día: altas,
+visitas y bajas. Los cambios se quedan en esta sesión hasta que los guardes.{% endblock %}
+
+{% block contenido %}
+<section class="rejilla-metricas">
+  {{ tarjeta("Origen", barra.origen) }}
+  {{ tarjeta("Socios", gimnasio.socios | length) }}
+  {{ tarjeta("Visitas", gimnasio.visitas | length | entero) }}
+  {% if barra.hay_datos %}
+  {{ tarjeta("Fechas analizables", barra.primera.strftime("%d/%m/%Y"),
+             "hasta el " ~ barra.ultima.strftime("%d/%m/%Y")) }}
+  {% endif %}
+</section>
+
+<h2 class="titulo-bloque">Origen de los datos</h2>
+<div class="rejilla-tres">
+  <section class="tarjeta">
+    <h3>Datos guardados</h3>
+    <p class="nota">Los CSV de la carpeta <code>datos/</code>.</p>
+    <form method="post" action="/datos/cargar">
+      <button class="boton" type="submit">Cargar datos/</button>
+    </form>
+  </section>
+  <section class="tarjeta">
+    <h3>Simulación</h3>
+    <p class="nota">Un gimnasio de 300 socios y 12 meses. La misma semilla da siempre los mismos datos.</p>
+    <form class="en-linea" method="post" action="/datos/simular">
+      <label class="campo"><span>Semilla</span>
+        <input type="number" name="semilla" min="0" value="{{ semilla }}" required></label>
+      <button class="boton" type="submit">Simular</button>
+    </form>
+  </section>
+  <section class="tarjeta">
+    <h3>Mis propios CSV</h3>
+    <p class="nota">Mismas columnas que los ficheros descargados. Visitas y acciones son opcionales.</p>
+    <form class="pila" method="post" action="/datos/subir" enctype="multipart/form-data">
+      <label class="campo"><span>socios.csv</span><input type="file" name="socios" accept=".csv" required></label>
+      <label class="campo"><span>visitas.csv</span><input type="file" name="visitas" accept=".csv"></label>
+      <label class="campo"><span>acciones.csv</span><input type="file" name="acciones" accept=".csv"></label>
+      <button class="boton" type="submit">Subir y cargar</button>
+    </form>
+  </section>
+</div>
+
+{% if barra.hay_datos %}
+<h2 class="titulo-bloque">Mantener los datos</h2>
+<div class="rejilla-tres">
+  <section class="tarjeta">
+    <h3>Alta de socio</h3>
+    <form class="pila" method="post" action="/datos/socios">
+      <label class="campo"><span>Nombre</span><input type="text" name="nombre" required></label>
+      <label class="campo"><span>Fecha de alta</span>
+        <input type="date" name="fecha_alta" value="{{ barra.ultima }}" required></label>
+      <label class="campo"><span>Tarifa</span>
+        <select name="tarifa">{% for tarifa in tarifas %}<option>{{ tarifa }}</option>{% endfor %}</select></label>
+      <label class="campo"><span>Cuota mensual (€)</span>
+        <input type="number" name="cuota" min="0" step="0.01" value="45" required></label>
+      <button class="boton" type="submit">Dar de alta</button>
+    </form>
+  </section>
+  <section class="tarjeta">
+    <h3>Apuntar una visita</h3>
+    <form class="pila" method="post" action="/datos/visitas">
+      <label class="campo"><span>Número de socio</span><input type="number" name="id_socio" min="1" required></label>
+      <label class="campo"><span>Fecha</span>
+        <input type="date" name="fecha" value="{{ barra.ultima }}" required></label>
+      <button class="boton" type="submit">Apuntar visita</button>
+    </form>
+    <p class="nota">No se admiten visitas de socios que no estuvieran de alta ese día.</p>
+  </section>
+  <section class="tarjeta">
+    <h3>Registrar una baja</h3>
+    <form class="pila" method="post" action="/datos/bajas">
+      <label class="campo"><span>Número de socio</span><input type="number" name="id_socio" min="1" required></label>
+      <label class="campo"><span>Fecha de baja</span>
+        <input type="date" name="fecha" value="{{ barra.ultima }}" required></label>
+      <button class="boton" type="submit">Registrar baja</button>
+    </form>
+    <p class="nota">La baja no puede ser anterior al alta ni a la última visita.</p>
+  </section>
+</div>
+
+<h2 class="titulo-bloque">Descargar y guardar</h2>
+<div class="rejilla-dos">
+  <section class="tarjeta">
+    <h3>Descargar los CSV actuales</h3>
+    <div class="descargas">
+      {% for fichero in ficheros %}
+      <a class="boton boton-secundario" href="/datos/descargar/{{ fichero }}" download>{{ icono("descargar") }} {{ fichero }}</a>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="tarjeta">
+    <h3>Guardar en datos/</h3>
+    <p class="nota">Sobrescribe los CSV de la carpeta <code>datos/</code>, incluidos los datos de ejemplo.</p>
+    <form method="post" action="/datos/guardar" data-confirmar="¿Seguro? Se sobrescribirán los datos de la carpeta datos/.">
+      <label class="casilla"><input type="checkbox" name="confirmar" value="si" required>
+        Entiendo que se sobrescriben los datos guardados</label>
+      <button class="boton boton-peligro" type="submit">Guardar en datos/</button>
+    </form>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

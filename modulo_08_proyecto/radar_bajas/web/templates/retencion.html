@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block titulo %}Retención{% endblock %}
+{% block encabezado %}Acciones de retención{% endblock %}
+{% block entradilla %}A cada socio en riesgo se le propone la acción que corresponde a su causa
+principal: una llamada si ha dejado de venir, una clase gratis si va menos o es nuevo, un descuento
+si le subió la cuota y un cambio de tarifa si no tiene permanencia. No se avisa a todos los socios
+porque cada acción cuesta tiempo o dinero: el umbral concentra el esfuerzo en quien más
+probablemente se iría.{% endblock %}
+
+{% block contenido %}
+<div class="rejilla-dos">
+  <section class="tarjeta">
+    <h2>Proponer acciones</h2>
+    <p class="nota">Hay <strong>{{ en_riesgo }}</strong> socios en riesgo con el umbral actual.
+      Se propone una acción a cada uno que no tenga ya una abierta.</p>
+    <form method="post" action="/retencion/proponer">
+      <button class="boton" type="submit">Proponer acciones a los socios en riesgo</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Avanzar una acción</h2>
+    {% if abiertas %}
+    <p class="nota">Flujo: propuesta → contactado → retenido o perdido. Los cambios que no sigan el
+      flujo se rechazan.</p>
+    <form class="filtros" method="post" action="/retencion/avanzar">
+      <label class="campo campo-ancho">
+        <span>Acción</span>
+        <select name="id_accion">
+          {% for accion in abiertas %}
+          <option value="{{ accion.id }}">{{ accion.id }} · socio {{ accion.id_socio }},
+            {{ accion.tipo | etiqueta }} ({{ accion.estado }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="campo">
+        <span>Nuevo estado</span>
+        <select name="estado">
+          {% for estado in estados %}<option value="{{ estado }}">{{ estado }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="boton" type="submit">Cambiar estado</button>
+    </form>
+    {% else %}
+    <p class="vacio">No hay acciones abiertas: propón acciones primero.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="tarjeta tarjeta-tabla">
+  <h2>Acciones abiertas ({{ abiertas | length }})</h2>
+  {% if abiertas %}
+  <table class="tabla" data-ordenable>
+    <thead><tr><th data-tipo="numero" class="num">Acción</th><th data-tipo="numero" class="num">Socio</th>
+      <th data-tipo="texto">Tipo</th><th data-tipo="texto">Estado</th><th data-tipo="texto">Propuesta</th></tr></thead>
+    <tbody>
+      {% for accion in abiertas %}
+      <tr>
+        <td class="num" data-valor="{{ accion.id }}">{{ accion.id }}</td>
+        <td class="num" data-valor="{{ accion.id_socio }}"><a href="/socios/{{ accion.id_socio }}">{{ accion.id_socio }}</a></td>
+        <td>{{ accion.tipo | etiqueta }}</td>
+        <td><span class="estado estado-{{ accion.estado }}">{{ accion.estado }}</span></td>
+        <td data-valor="{{ accion.fecha_propuesta }}">{{ accion.fecha_propuesta.strftime("%d/%m/%Y") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="vacio">Ninguna.</p>
+  {% endif %}
+</section>
+
+<section class="tarjeta tarjeta-tabla">
+  <h2>Eficacia por tipo de acción</h2>
+  <p class="nota">Acciones conocidas a la fecha de análisis. La tasa es el porcentaje de retenidos entre las cerradas.</p>
+  <table class="tabla">
+    <thead><tr><th>Tipo</th><th class="num">Propuestas</th><th class="num">Contactados</th>
+      <th class="num">Retenidos</th><th class="num">Perdidos</th><th class="num">Tasa de retención</th></tr></thead>
+    <tbody>
+      {% for fila in eficacia %}
+      <tr>
+        <td>{{ fila.tipo | etiqueta }}</td>
+        <td class="num">{{ fila.propuesta }}</td><td class="num">{{ fila.contactado }}</td>
+        <td class="num">{{ fila.retenido }}</td><td class="num">{{ fila.perdido }}</td>
+        <td class="num">{{ fila.tasa_retencion | tasa }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

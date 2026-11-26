@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "componentes.html" import grafico, tarjeta %}
+{% set metricas = resultado.metricas %}
+{% block titulo %}Validación{% endblock %}
+{% block encabezado %}Validación del modelo{% endblock %}
+{% block entradilla %}Una <strong>fecha de corte</strong> es un día del pasado en el que calculamos el
+riesgo como si fuera hoy, usando solo lo que se sabía ese día: nada de información del futuro.
+Después comprobamos quién se dio de baja de verdad en los días siguientes (el horizonte).
+Así medimos cuánto acierta el radar.{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta">
+  <form class="filtros" method="get" action="/validacion">
+    <label class="campo">
+      <span>Fechas de corte</span>
+      <select name="cortes">
+        {% for opcion in opciones_cortes %}
+        <option value="{{ opcion }}" {% if opcion == cortes %}selected{% endif %}>{{ opcion }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="campo">
+      <span>Horizonte</span>
+      <select name="horizonte">
+        {% for opcion in opciones_horizonte %}
+        <option value="{{ opcion }}" {% if opcion == horizonte %}selected{% endif %}>{{ opcion }} días</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="boton" type="submit">Validar</button>
+  </form>
+  <div class="chips">
+    <span class="nota">Cortes usados:</span>
+    {% for corte in resultado.cortes %}<span class="chip">{{ corte.strftime("%d/%m/%Y") }}</span>{% endfor %}
+  </div>
+  <p class="nota">Se cuenta como acierto que el socio avisado se dé de baja en los
+    {{ resultado.horizonte_dias }} días siguientes al corte. Casos analizados (socio y fecha de corte):
+    {{ metricas.casos }}.</p>
+</section>
+
+<section class="rejilla-metricas">
+  {{ tarjeta("Precisión", (100 * metricas.precision) | porcentaje, "De los avisados, cuántos se fueron") }}
+  {{ tarjeta("Recall", (100 * metricas.recall) | porcentaje, "De los que se fueron, a cuántos avisamos") }}
+  {{ tarjeta("Tasa base", (100 * metricas.tasa_base) | porcentaje, "Lo que acertaría avisar al azar") }}
+  {{ tarjeta("Mejor que el azar", ("%.1f" | format(metricas.mejora) | replace(".", ",")) ~ " veces",
+             "Precisión frente a tasa base", "metrica-destacada") }}
+</section>
+
+<div class="rejilla-dos">
+  <section class="tarjeta">
+    <h2>Matriz de confusión (umbral {{ resultado.umbral }})</h2>
+    <p class="nota">Filas: lo que pasó. Columnas: lo que avisó el radar.</p>
+    <table class="tabla matriz">
+      <thead><tr><th></th><th class="num">Sin alerta</th><th class="num">Alerta</th></tr></thead>
+      <tbody>
+        {% for fila in matriz %}
+        <tr>
+          <th scope="row">{{ fila.real | capitalize }}</th>
+          <td class="num {{ 'celda-acierto' if fila.real == 'se queda' else 'celda-fallo' }}">{{ fila["sin alerta"] }}</td>
+          <td class="num {{ 'celda-fallo' if fila.real == 'se queda' else 'celda-acierto' }}">{{ fila["alerta"] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="nota">Verde: aciertos. Rojo: falsas alarmas (arriba) y bajas que se escaparon (abajo).</p>
+  </section>
+  <section class="tarjeta">
+    <h2>Precisión y recall según el umbral</h2>
+    <p class="nota">Un umbral bajo avisa a más socios y detecta más bajas, con más falsas alarmas;
+      uno alto acierta más, pero se le escapan más bajas.</p>
+    {{ grafico("grafico-barrido", grafico_barrido, "lineas", 240) }}
+  </section>
+</div>
+
+<section class="tarjeta tarjeta-tabla">
+  <h2>Barrido de umbrales</h2>
+  <table class="tabla">
+    <thead><tr><th class="num">Umbral</th><th class="num">Alertas</th><th class="num">Aciertos</th>
+      <th class="num">Precisión</th><th class="num">Recall</th></tr></thead>
+    <tbody>
+      {% for fila in barrido %}
+      <tr {% if fila.umbral == resultado.umbral %}class="fila-actual"{% endif %}>
+        <td class="num">{{ fila.umbral }}</td><td class="num">{{ fila.alertas }}</td>
+        <td class="num">{{ fila.aciertos }}</td>
+        <td class="num">{{ (100 * fila.precision) | porcentaje }}</td>
+        <td class="num">{{ (100 * fila.recall) | porcentaje }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

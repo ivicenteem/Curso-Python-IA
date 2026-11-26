@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "componentes.html" import grafico, tarjeta %}
+{% block titulo %}Resumen{% endblock %}
+{% block encabezado %}Resumen para la dirección{% endblock %}
+{% block entradilla %}Cuántos socios están ahora en riesgo de darse de baja, cuánto dinero suponen
+sus cuotas y cómo ha evolucionado el abandono en el último año.{% endblock %}
+
+{% block contenido %}
+<section class="rejilla-metricas">
+  {{ tarjeta("Socios activos", indicadores.socios_activos) }}
+  {{ tarjeta("Socios en riesgo", indicadores.en_riesgo,
+             (indicadores.porcentaje_en_riesgo | porcentaje) ~ " de los activos", "metrica-alerta") }}
+  {{ tarjeta("Ingresos en juego al mes", indicadores.ingresos_en_juego | euros,
+             "Cuotas de los socios en riesgo") }}
+  {{ tarjeta("Ingresos en juego al año", (12 * indicadores.ingresos_en_juego) | euros,
+             "Si se fueran todos") }}
+  {{ tarjeta("Abandono mensual medio", indicadores.tasa_abandono_media | porcentaje,
+             "Últimos 12 meses") }}
+</section>
+
+<section class="tarjeta">
+  <h2>Bajas por mes</h2>
+  <p class="nota">Socios que se dieron de baja cada mes. El último mes cuenta hasta la fecha de análisis.</p>
+  {{ grafico("grafico-bajas", graficos.bajas, "barras", 280) }}
+</section>
+
+<div class="rejilla-dos">
+  <section class="tarjeta">
+    <h2>Riesgo medio por tarifa</h2>
+    <p class="nota">Las tarifas sin permanencia acumulan más riesgo.</p>
+    {{ grafico("grafico-tarifa", graficos.tarifa) }}
+  </section>
+  <section class="tarjeta">
+    <h2>Eficacia de las acciones</h2>
+    <p class="nota">Porcentaje de socios retenidos entre las acciones cerradas de cada tipo.
+      {% if indicadores.mejor_accion %}La que más retiene: <strong>{{ indicadores.mejor_accion | etiqueta }}</strong>.{% endif %}</p>
+    {{ grafico("grafico-eficacia", graficos.eficacia) }}
+  </section>
+</div>
+{% endblock %}

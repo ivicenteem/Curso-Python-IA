@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "componentes.html" import grafico, icono, pastilla, tarjeta %}
+{% set socio = evaluacion.socio %}
+{% block titulo %}Socio {{ socio.id }}{% endblock %}
+{% block encabezado %}Socio {{ socio.id }}: {{ socio.nombre }}{% endblock %}
+{% block entradilla %}Por qué tiene este riesgo, señal a señal, y qué conviene hacer.{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="/socios">{{ icono("volver") }} Volver a la lista</a>
+
+<section class="rejilla-metricas">
+  <div class="tarjeta metrica">
+    <span class="metrica-titulo">Riesgo</span>
+    <span class="metrica-valor">{{ pastilla(evaluacion.riesgo, barra.umbral) }}</span>
+    <span class="metrica-detalle">{{ "En riesgo" if evaluacion.en_riesgo else "Por debajo del umbral" }}</span>
+  </div>
+  {{ tarjeta("Tarifa", socio.tarifa, (socio.cuota | euros) ~ " al mes") }}
+  {{ tarjeta("Socio desde", socio.fecha_alta.strftime("%d/%m/%Y"),
+             socio.antiguedad_dias(barra.fecha) ~ " días") }}
+</section>
+
+<section class="tarjeta destacado">
+  <p class="explicacion">{{ evaluacion.explicacion }}</p>
+  <p class="accion">{{ accion }}</p>
+</section>
+
+<div class="rejilla-dos">
+  <section class="tarjeta">
+    <h2>Puntos por señal</h2>
+    <p class="nota">Cada señal suma puntos según su peso; el total se lleva a una escala de 0 a 100.
+      Los «días sin venir» se cuentan hasta la fecha de análisis.</p>
+    {{ grafico("grafico-senales", graficos.senales, "barras-horizontales", 240) }}
+    <table class="tabla tabla-compacta">
+      <thead><tr><th>Señal</th><th class="num">Puntos</th><th>Detalle</th></tr></thead>
+      <tbody>
+        {% for senal in senales %}
+        <tr><td>{{ senal.senal | etiqueta }}</td>
+            <td class="num">{{ "%.1f" | format(senal.puntos) | replace(".", ",") }}</td>
+            <td>{{ senal.detalle }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="tarjeta">
+    <h2>Visitas por mes</h2>
+    <p class="nota">Últimos doce meses hasta la fecha de análisis. Quien se va suele ir cada vez menos.</p>
+    {{ grafico("grafico-visitas", graficos.visitas, "barras", 240) }}
+  </section>
+</div>
+{% endblock %}

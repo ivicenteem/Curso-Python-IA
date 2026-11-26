@@ -179,7 +179,7 @@ def informe_direccion(resumen: ResumenDireccion) -> str:
         f"  {'TIPO':<15}{'CERRADAS':>9}{'RETENIDOS':>11}{'TASA':>10}",
         *_lineas(_celda(eficacia.index, 15, izquierda=True), _celda(eficacia["cerradas"], 9),
                  _celda(eficacia["retenido"], 11),
-                 _celda(eficacia["tasa_retencion"].map(_texto_tasa), 10)),
+                 _celda(eficacia["tasa_retencion"].map(texto_tasa), 10)),
         "=" * ANCHO,
     ]
     return "\n".join(lineas)
@@ -190,6 +190,6 @@ def _texto_accion(tipo: str | None) -> str:
     return tipo or "faltan acciones cerradas para comparar"
 
 
-def _texto_tasa(tasa: float) -> str:
+def texto_tasa(tasa: float) -> str:
     """Tasa en porcentaje o un guion si no hay acciones cerradas (NaN)."""
     return "-" if pd.isna(tasa) else porcentaje(tasa)

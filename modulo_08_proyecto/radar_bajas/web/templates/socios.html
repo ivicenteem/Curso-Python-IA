@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "componentes.html" import pastilla %}
+{% block titulo %}Socios{% endblock %}
+{% block encabezado %}Socios{% endblock %}
+{% block entradilla %}Cada socio tiene un índice de riesgo de 0 a 100 que suma sus señales de alerta.
+Pulsa en un socio para ver por qué tiene ese riesgo.{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta">
+  <form class="filtros" method="get" action="/socios">
+    <label class="campo campo-ancho">
+      <span>Buscar</span>
+      <input type="search" name="q" value="{{ q }}" placeholder="Nombre o número de socio">
+    </label>
+    <fieldset class="campo">
+      <legend>Tarifa</legend>
+      <div class="opciones">
+        {% for tarifa in todas_tarifas %}
+        <label class="casilla"><input type="checkbox" name="tarifa" value="{{ tarifa }}"
+               {% if tarifa in tarifas %}checked{% endif %}> {{ tarifa }}</label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <label class="campo">
+      <span>Riesgo mínimo</span>
+      <input type="number" name="minimo" min="0" max="100" value="{{ minimo }}">
+    </label>
+    <button class="boton" type="submit">Filtrar</button>
+  </form>
+  <p class="nota">Los «días sin venir» se cuentan hasta la fecha de análisis
+    ({{ barra.fecha.strftime("%d/%m/%Y") }}). Pulsa en las cabeceras para ordenar.</p>
+</section>
+
+<section class="tarjeta tarjeta-tabla">
+  <div class="tabla-cabecera">
+    <h2>{{ filas | length }} de {{ total }} socios activos</h2>
+  </div>
+  {% if filas %}
+  <table class="tabla" data-ordenable>
+    <thead>
+      <tr>
+        <th data-tipo="numero" class="num">Socio</th>
+        <th data-tipo="texto">Nombre</th>
+        <th data-tipo="texto">Tarifa</th>
+        <th data-tipo="numero" class="num">Cuota</th>
+        <th data-tipo="numero" class="num" aria-sort="descending">Riesgo</th>
+        <th data-tipo="texto">Motivos</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in filas %}
+      <tr class="fila-enlace" data-href="/socios/{{ fila.id_socio }}">
+        <td class="num" data-valor="{{ fila.id_socio }}"><a href="/socios/{{ fila.id_socio }}">{{ fila.id_socio }}</a></td>
+        <td>{{ fila.nombre }}</td>
+        <td>{{ fila.tarifa }}</td>
+        <td class="num" data-valor="{{ fila.cuota }}">{{ fila.cuota | euros }}</td>
+        <td class="num" data-valor="{{ fila.riesgo }}">{{ pastilla(fila.riesgo, barra.umbral) }}</td>
+        <td class="motivos">{{ fila.motivos }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="vacio">Ningún socio cumple los filtros.</p>
+  {% endif %}
+</section>
+{% endblock %}

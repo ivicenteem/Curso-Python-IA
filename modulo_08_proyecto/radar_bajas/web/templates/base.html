@@ -1,0 +1,75 @@
+{% from "componentes.html" import icono %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block titulo %}{% endblock %} · Radar de Bajas</title>
+  <link rel="stylesheet" href="/static/css/estilo.css">
+  <script src="/static/js/chart.umd.min.js" defer></script>
+  <script src="/static/js/radar.js" defer></script>
+</head>
+<body>
+<aside class="lateral">
+  <a class="marca" href="/">
+    {{ icono("radar", "icono marca-icono") }}
+    <span>Radar de Bajas</span>
+  </a>
+
+  <nav class="menu" aria-label="Secciones">
+    {% for clave, texto in [("resumen", "Resumen"), ("socios", "Socios"),
+                            ("validacion", "Validación"), ("retencion", "Retención"),
+                            ("datos", "Datos")] %}
+    <a href="{{ '/' if clave == 'resumen' else '/' ~ clave }}"
+       class="menu-enlace{% if seccion == clave %} activo{% endif %}"
+       {% if seccion == clave %}aria-current="page"{% endif %}>
+      {{ icono(clave) }}<span>{{ texto }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  {% if barra.hay_datos %}
+  <form class="ajustes" method="post" action="/ajustes" data-autoenvio>
+    <input type="hidden" name="volver"
+           value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+    <label class="ajuste">
+      <span class="ajuste-titulo">Umbral de riesgo <output data-salida="umbral">{{ barra.umbral }}</output></span>
+      <input type="range" name="umbral" min="{{ barra.minimo }}" max="{{ barra.maximo }}"
+             value="{{ barra.umbral }}" data-muestra="umbral">
+    </label>
+    <label class="ajuste">
+      <span class="ajuste-titulo">Fecha de análisis</span>
+      <input type="date" name="fecha" min="{{ barra.primera }}" max="{{ barra.ultima }}"
+             value="{{ barra.fecha }}" required>
+    </label>
+    <button class="boton boton-secundario boton-bloque" type="submit">Aplicar</button>
+    <p class="ajuste-nota">Datos: {{ barra.origen }}</p>
+  </form>
+  {% endif %}
+</aside>
+
+<main class="contenido">
+  <header class="cabecera">
+    <div>
+      <h1>{% block encabezado %}{% endblock %}</h1>
+      <p class="entradilla">{% block entradilla %}{% endblock %}</p>
+    </div>
+    {% if barra.hay_datos %}
+    <div class="contexto">
+      <span class="etiqueta">A fecha de {{ barra.fecha.strftime("%d/%m/%Y") }}</span>
+      <span class="etiqueta">Umbral {{ barra.umbral }}</span>
+    </div>
+    {% endif %}
+  </header>
+
+  {% for mensaje in mensajes %}
+  <div class="aviso aviso-{{ mensaje.tipo }}" role="{{ 'alert' if mensaje.tipo == 'error' else 'status' }}">
+    {{ mensaje.texto }}
+  </div>
+  {% endfor %}
+
+  {% block contenido %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titulo %}Aviso{% endblock %}
+{% block encabezado %}No se ha podido mostrar esta página{% endblock %}
+{% block entradilla %}El motivo aparece arriba. Puedes volver atrás o revisar los datos.{% endblock %}
+
+{% block contenido %}
+<section class="tarjeta">
+  <div class="en-linea">
+    <a class="boton boton-secundario" href="/">Ir al resumen</a>
+    <a class="boton" href="/datos">Ir a Datos</a>
+  </div>
+</section>
+{% endblock %}
