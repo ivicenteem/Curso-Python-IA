@@ -51,9 +51,9 @@ def _comprobar_positivo(valor: float, nombre: str) -> None:
         raise DatosNoValidos(f"{nombre} debe ser mayor que cero: {valor}")
 
 
-def _error_de_fila(clase: str, fila: dict[str, str], error: Exception) -> DatosNoValidos:
+def _error_de_fila(clase: str, error: Exception) -> DatosNoValidos:
     """Construye el error que se lanza cuando una fila del CSV no se puede convertir."""
-    return DatosNoValidos(f"Fila de {clase} no válida ({error!r}): {fila}")
+    return DatosNoValidos(f"Fila de {clase} no válida: {error!r}")
 
 
 @dataclass
@@ -141,7 +141,7 @@ class Socio:
                 "fecha_baja": _a_fecha(fila["fecha_baja"]),
             }
         except (KeyError, ValueError, TypeError) as error:
-            raise _error_de_fila("socio", fila, error) from error
+            raise _error_de_fila("socio", error) from error
         return cls(**datos)
 
 
@@ -167,7 +167,7 @@ class Visita:
             datos = {"id_socio": int(fila["id_socio"]),
                      "fecha": date.fromisoformat(fila["fecha"])}
         except (KeyError, ValueError, TypeError) as error:
-            raise _error_de_fila("visita", fila, error) from error
+            raise _error_de_fila("visita", error) from error
         return cls(**datos)
 
 
@@ -243,7 +243,7 @@ class AccionRetencion:
                 "fecha_cierre": _a_fecha(fila["fecha_cierre"]),
             }
         except (KeyError, ValueError, TypeError) as error:
-            raise _error_de_fila("acción", fila, error) from error
+            raise _error_de_fila("acción", error) from error
         return cls(**datos)
 
 

@@ -18,7 +18,7 @@ PESOS = {
 }
 
 # A partir de este riesgo un socio se considera en riesgo de baja
-UMBRAL_RIESGO = 50
+UMBRAL_RIESGO = 40
 
 
 @dataclass(frozen=True)
