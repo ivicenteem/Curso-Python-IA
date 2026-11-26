@@ -88,9 +88,15 @@ class Radar:
 
     def evaluar_socio(self, gimnasio: Gimnasio, id_socio: int,
                       fecha: date | None = None) -> Evaluacion:
-        """Evalúa un socio del gimnasio. Sin ``fecha``, usa la fecha de referencia de los datos."""
+        """Evalúa un socio del gimnasio. Sin ``fecha``, usa la fecha de referencia de los datos.
+
+        Lanza ``SocioNoEncontrado`` si no existe y ``DatosNoValidos`` si no
+        estaba dado de alta en esa fecha.
+        """
         fecha = fecha or gimnasio.fecha_referencia
         socio = gimnasio.socio(id_socio)
+        if not socio.activo_en(fecha):
+            raise DatosNoValidos(f"El socio {id_socio} no estaba dado de alta el {fecha.isoformat()}")
         return self.evaluar(socio, gimnasio.visitas_hasta(id_socio, fecha), fecha)
 
     def evaluar_todos(self, gimnasio: Gimnasio, fecha: date | None = None) -> list[Evaluacion]:
