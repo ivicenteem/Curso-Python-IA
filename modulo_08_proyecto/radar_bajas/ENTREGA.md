@@ -5,7 +5,7 @@
 
 ## Estado
 
-- Tests superados: 183 de 183 (`pytest modulo_08_proyecto/radar_bajas`)
+- Tests superados: 248 de 248 (`pytest modulo_08_proyecto/radar_bajas`)
 - Hitos terminados (1 a 7): todos
   1. Excepciones y modelos
   2. Señales y radar
@@ -30,7 +30,7 @@ El resto de las decisiones (índice explicable, polimorfismo en las señales, va
 - **Análisis en el menú y gráficos:** la opción 9 muestra el informe para la dirección y la opción 10 guarda tres gráficos PNG en `datos/graficos/`.
 - **Validación del modelo:** la opción 5 hace el backtesting con seis fechas de corte y muestra la matriz de confusión, la precisión, el recall y un barrido de umbrales.
 - **Simulador reproducible:** la opción 1 genera un gimnasio completo con la semilla que se indique.
-- **Interfaz web con Streamlit:** `web_app.py` muestra el resumen para la dirección, los socios en riesgo con su ficha, la validación (que reacciona al umbral elegido) y las acciones de retención. Se instala con `pip install -r modulo_08_proyecto/radar_bajas/requirements.txt` y se lanza desde la raíz con `streamlit run modulo_08_proyecto/radar_bajas/web_app.py`.
+- **Panel web propio (FastAPI, Jinja2, CSS y Chart.js):** resumen para la dirección, socios con buscador y ficha, validación con número de cortes y horizonte a elegir, acciones de retención y gestión de datos (cargar, simular, subir CSV, altas, visitas, bajas, descargar y guardar). El umbral y la fecha de análisis se aplican a todas las secciones. Se instala con `pip install -r modulo_08_proyecto/radar_bajas/requirements.txt` y se lanza desde la raíz con `python modulo_08_proyecto/radar_bajas/web`.
 
 Para probarlas: `cd modulo_08_proyecto/radar_bajas`, `python radar_app.py` y las opciones 5, 9 y 10. Después de usar las opciones 6 y 7, el registro está en `radar.log`.
 

@@ -56,23 +56,29 @@ Las operaciones se registran en `radar.log`.
 
 ### Interfaz web
 
-Además del menú de consola hay una interfaz web hecha con Streamlit. Necesita una dependencia más, que está en el `requirements.txt` de esta carpeta. Desde la raíz del repositorio:
+Además del menú de consola hay un panel web hecho con FastAPI, plantillas Jinja2, CSS propio y Chart.js. Chart.js va incluido en `web/static/`, así que funciona sin conexión a internet. Las dependencias de la web están en el `requirements.txt` de esta carpeta. Desde la raíz del repositorio:
 
 ```bash
 pip install -r modulo_08_proyecto/radar_bajas/requirements.txt
-streamlit run modulo_08_proyecto/radar_bajas/web_app.py
+python modulo_08_proyecto/radar_bajas/web
 ```
 
-Se abre en http://localhost:8501. En la barra lateral se elige el origen de los datos (los guardados en `datos/` o una simulación con la semilla que se quiera), el umbral de riesgo (de 20 a 80, por defecto 40) y la sección:
+Se abre el navegador en http://127.0.0.1:8000. La web solo escucha en el propio ordenador, y se para con Ctrl+C. Con `--sin-navegador` arranca sin abrirlo.
+
+En la barra lateral hay dos ajustes que se aplican a todas las secciones:
+
+- **Umbral de riesgo** (de 20 a 80, por defecto 40).
+- **Fecha de análisis.** Por defecto es el último día de los datos. Puede ser cualquier día desde que hay dos meses de historial, y así se ve cómo estaba el gimnasio en una fecha pasada usando solo lo que se sabía entonces.
 
 | Sección | Qué muestra |
 | --- | --- |
-| Resumen para la dirección | Socios activos, socios en riesgo, ingresos en juego al mes y al año y abandono medio; bajas por mes, riesgo medio por tarifa y eficacia de las acciones |
-| Socios en riesgo | Tabla ordenable con filtros por tarifa y riesgo mínimo. Al elegir un socio, su explicación, los puntos de cada señal en un gráfico y la acción recomendada |
-| Validación del modelo | Fechas de corte, matriz de confusión, precisión, recall, tasa base y cuántas veces mejor que el azar, según el umbral elegido; barrido de umbrales en tabla y gráfico |
-| Acciones de retención | Proponer acciones a los socios en riesgo, avanzar su estado con un formulario (las transiciones no permitidas muestran el error), acciones abiertas, eficacia por tipo y guardar en `datos/` |
+| Resumen | Socios activos, socios en riesgo, ingresos en juego al mes y al año y abandono medio. Bajas por mes, riesgo medio por tarifa y eficacia de las acciones |
+| Socios | Tabla con buscador, filtro por tarifa y riesgo mínimo, ordenable pulsando en las cabeceras, con una pastilla de color para el riesgo (roja si supera el umbral). Al pulsar un socio se abre su ficha: explicación, puntos de cada señal, acción recomendada y visitas por mes |
+| Validación | Se eligen el número de fechas de corte (de 3 a 10) y el horizonte (15, 30 o 60 días). Muestra los cortes usados, la matriz de confusión, la precisión, el recall, la tasa base y cuántas veces mejor que el azar, además del barrido de umbrales en tabla y gráfico |
+| Retención | Proponer acciones a los socios en riesgo y avanzar su estado (las transiciones no permitidas muestran el error). También las acciones abiertas y la eficacia por tipo |
+| Datos | Cargar `datos/`, simular con una semilla o subir CSV propios (un error indica el fichero y la línea). Dar de alta socios, apuntar visitas y registrar bajas. Descargar los CSV actuales y guardarlos en `datos/` (pide confirmación) |
 
-Igual que el menú, la web solo presenta: todos los cálculos los hace el paquete `radar`. Los datos, el riesgo y el backtesting se guardan en caché (`st.cache_resource` y `st.cache_data`) para no recalcularlos en cada clic, y las acciones de la sesión viven en `st.session_state` hasta que se guardan.
+Igual que el menú, la web solo presenta: los cálculos y las reglas están en el paquete `radar`. Por ejemplo, no se puede apuntar una visita a un socio dado de baja ni registrar una baja anterior al alta, y eso lo comprueba `Gimnasio`, no la web. Los errores de la aplicación (`ErrorRadar`) se muestran como avisos en la página, nunca como una traza. Los cambios se quedan en la sesión de la web hasta que se guardan.
 
 ### Tests
 
@@ -80,7 +86,7 @@ Igual que el menú, la web solo presenta: todos los cálculos los hace el paquet
 pytest modulo_08_proyecto/radar_bajas -v
 ```
 
-Los tests de la web se saltan si Streamlit no está instalado.
+Los tests de la web se saltan si sus dependencias no están instaladas.
 
 ## Arquitectura
 
@@ -89,8 +95,12 @@ Igual que el gestor de incidencias del módulo, la aplicación se organiza en ca
 ```
 radar_bajas/
 ├── radar_app.py        Menú de consola: el único sitio con input, print y captura de errores
-├── web_app.py          Interfaz web con Streamlit: otra capa de presentación
-├── requirements.txt    Dependencia extra de la web (streamlit)
+├── requirements.txt    Dependencias de la web (FastAPI, Uvicorn, Jinja2...)
+├── web/                Panel web: otra capa de presentación
+│   ├── __main__.py     Arranca el servidor en 127.0.0.1:8000 y abre el navegador
+│   ├── app.py          Rutas: piden los cálculos al paquete radar y pintan las plantillas
+│   ├── templates/      Páginas HTML (Jinja2)
+│   └── static/         CSS propio, radar.js y Chart.js
 ├── conftest.py         Añade esta carpeta a sys.path para los tests
 ├── datos/              CSV de ejemplo (semilla 42) y gráficos exportados
 ├── radar/
@@ -118,7 +128,7 @@ radar_bajas/
 | `almacen` | Convertir entre objetos y CSV | No decide cuándo se guarda |
 | `analisis` y `graficos` | Tablas, indicadores y figuras | No modifican los datos; no imprimen |
 | `informes` | Construir textos | No imprime |
-| `radar_app` y `web_app` | Pedir datos, mostrar resultados y capturar errores | No tienen reglas de negocio |
+| `radar_app` y `web` | Pedir datos, mostrar resultados y capturar errores | No tienen reglas de negocio |
 
 ## Cómo se calcula el riesgo
 
@@ -223,7 +233,7 @@ Con los datos de ejemplo, a 31/10/2026:
 
 ## Tests
 
-183 tests repartidos por capa, con fixtures (un gimnasio simulado con semilla fija que comparte toda la sesión) y `parametrize`. Cubren:
+248 tests repartidos por capa, con fixtures (un gimnasio simulado con semilla fija que comparte toda la sesión) y `parametrize`. Cubren:
 
 - las reglas de los modelos y las transiciones;
 - cada señal por separado, el riesgo y la explicación;
@@ -231,7 +241,8 @@ Con los datos de ejemplo, a 31/10/2026:
 - el simulador y el almacén (ida y vuelta CSV con `tmp_path`, columnas que faltan, fila no válida con su línea);
 - el análisis, los gráficos y los informes;
 - el menú completo con `monkeypatch` de `input`;
-- la web con `streamlit.testing.v1.AppTest`: arranca, dibuja cada sección, el umbral cambia los socios en riesgo y una transición no permitida muestra un error.
+- las operaciones de datos (altas, visitas y bajas con sus reglas), la fecha de análisis, la validación con distintos cortes y horizontes y los CSV como texto;
+- la web con el `TestClient` de FastAPI: cada página responde, el umbral y la fecha de análisis cambian los socios en riesgo, la validación responde a los cortes y al horizonte, una transición no permitida muestra el error y un CSV incorrecto indica el fichero y la línea.
 
 ## Limitaciones y mejoras
 
