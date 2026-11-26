@@ -82,7 +82,7 @@ def test_validacion_suma_todos_los_casos(resultado):
 
 def test_el_radar_es_mucho_mejor_que_el_azar(resultado):
     assert resultado.metricas.mejora > 5
-    assert resultado.metricas.recall > 0.5
+    assert resultado.metricas.recall > 0.4
 
 
 def test_barrido_umbral_mas_alto_menos_alertas_y_menos_recall(resultado):

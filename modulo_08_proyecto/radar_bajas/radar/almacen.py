@@ -25,15 +25,21 @@ Registro = Socio | Visita | AccionRetencion
 
 def guardar(carpeta: Path, gimnasio: Gimnasio, acciones: Iterable[AccionRetencion]) -> None:
     """Escribe los socios, las visitas y las acciones en ``carpeta``, creándola si hace falta."""
+    carpeta = crear_carpeta(carpeta)
+    _escribir(carpeta / FICHERO_SOCIOS, CAMPOS_SOCIO, gimnasio.socios.values())
+    _escribir(carpeta / FICHERO_VISITAS, CAMPOS_VISITA, gimnasio.visitas)
+    _escribir(carpeta / FICHERO_ACCIONES, CAMPOS_ACCION, acciones)
+    logger.info("Datos guardados en %s", carpeta)
+
+
+def crear_carpeta(carpeta: Path) -> Path:
+    """Crea la carpeta si no existe y la devuelve como ``Path``."""
     carpeta = Path(carpeta)
     try:
         carpeta.mkdir(parents=True, exist_ok=True)
     except OSError as error:
         raise ErrorDeAlmacen(f"No se puede crear la carpeta {carpeta}: {error}") from error
-    _escribir(carpeta / FICHERO_SOCIOS, CAMPOS_SOCIO, gimnasio.socios.values())
-    _escribir(carpeta / FICHERO_VISITAS, CAMPOS_VISITA, gimnasio.visitas)
-    _escribir(carpeta / FICHERO_ACCIONES, CAMPOS_ACCION, acciones)
-    logger.info("Datos guardados en %s", carpeta)
+    return carpeta
 
 
 def cargar(carpeta: Path) -> tuple[Gimnasio, list[AccionRetencion]]:

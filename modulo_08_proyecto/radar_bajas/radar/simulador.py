@@ -8,6 +8,9 @@ gimnasio real:
   aumentan la probabilidad mensual de baja.
 - Antes de darse de baja, el socio va cada vez menos y deja de venir unas
   semanas antes de irse.
+- También se simulan las bajas de los meses siguientes a ``fin``: no se
+  guardan, porque todavía no han ocurrido, pero su declive ya se ve en las
+  visitas, igual que en un gimnasio real el día de hoy.
 - Algunos socios fieles hacen una pausa (vacaciones, una lesión) y vuelven:
   son las falsas alarmas que cualquier modelo tiene que soportar.
 
@@ -42,6 +45,7 @@ DIAS_SOCIO_NUEVO = 90
 EXTRA_BAJA_SUBIDA = 0.06           # durante los DIAS_EFECTO_SUBIDA días tras una subida
 DIAS_EFECTO_SUBIDA = 90
 DIAS_MINIMOS_ANTES_DE_BAJA = 14
+MESES_FUTUROS = 2                  # meses tras el final con bajas que aún no han ocurrido
 
 PROB_SUBIDA = 0.3
 SUBIDA_MINIMA, SUBIDA_MAXIMA = 0.08, 0.25
@@ -73,10 +77,15 @@ def simular(n_socios: int = N_SOCIOS, *, fin: date = FECHA_FIN, meses: int = MES
         raise DatosNoValidos("El número de socios y de meses debe ser positivo")
     generador = np.random.default_rng(semilla)
     meses_simulados = primeros_de_mes(fin, meses)
-    socios = [_simular_socio(generador, id_socio, meses_simulados, fin)
-              for id_socio in range(1, n_socios + 1)]
-    visitas = [visita for socio in socios
-               for visita in _simular_visitas(generador, socio, meses_simulados[0], fin)]
+    meses_siguientes = primeros_de_mes(date(fin.year + 1, fin.month, 1), 12)
+    meses_bajas = meses_simulados + meses_siguientes[:MESES_FUTUROS]
+    fin_bajas = meses_siguientes[MESES_FUTUROS] - _dias(1)
+    socios, visitas = [], []
+    for id_socio in range(1, n_socios + 1):
+        socio = _simular_socio(generador, id_socio, meses_simulados[0], fin)
+        baja = _simular_baja(generador, socio, meses_bajas, fin_bajas)
+        visitas += _simular_visitas(generador, socio, baja, meses_simulados[0], fin)
+        socios.append(replace(socio, fecha_baja=baja if baja and baja <= fin else None))
     return Gimnasio.desde_listas(socios, visitas)
 
 
@@ -90,10 +99,9 @@ def _fecha_entre(generador: np.random.Generator, desde: date, hasta: date) -> da
     return desde + _dias(generador.integers(0, (hasta - desde).days + 1))
 
 
-def _simular_socio(generador: np.random.Generator, id_socio: int, meses: list[date],
+def _simular_socio(generador: np.random.Generator, id_socio: int, inicio: date,
                    fin: date) -> Socio:
-    """Genera un socio con su alta, tarifa, posible subida de cuota y posible baja."""
-    inicio = meses[0]
+    """Genera un socio, todavía sin baja, con su alta, tarifa y posible subida de cuota."""
     tarifa = str(generador.choice(TARIFAS, p=[PROB_TARIFA[tarifa] for tarifa in TARIFAS]))
     if generador.random() < PROPORCION_ANTIGUOS:
         alta = _fecha_entre(generador, inicio - _dias(ANTIGUEDAD_MAXIMA_DIAS), inicio - _dias(1))
@@ -104,8 +112,7 @@ def _simular_socio(generador: np.random.Generator, id_socio: int, meses: list[da
     cuota = round(cuota_base * (1 + generador.uniform(SUBIDA_MINIMA, SUBIDA_MAXIMA)), 2) \
         if cambio else cuota_base
     nombre = f"{generador.choice(NOMBRES)} {generador.choice(APELLIDOS)}"
-    socio = Socio(id_socio, nombre, alta, tarifa, cuota, cuota_base, cambio)
-    return replace(socio, fecha_baja=_simular_baja(generador, socio, meses, fin))
+    return Socio(id_socio, nombre, alta, tarifa, cuota, cuota_base, cambio)
 
 
 def _simular_subida(generador: np.random.Generator, alta: date, inicio: date,
@@ -141,17 +148,17 @@ def _simular_baja(generador: np.random.Generator, socio: Socio, meses: list[date
     return None
 
 
-def _simular_visitas(generador: np.random.Generator, socio: Socio, inicio: date,
-                     fin: date) -> list[Visita]:
+def _simular_visitas(generador: np.random.Generator, socio: Socio, baja: date | None,
+                     inicio: date, fin: date) -> list[Visita]:
     """Genera las visitas del socio con su ritmo, su declive si se va o una pausa si no."""
     desde = max(socio.fecha_alta, inicio)
-    hasta = socio.fecha_baja - _dias(1) if socio.fecha_baja else fin
+    hasta = min(baja - _dias(1), fin) if baja else fin
     numero_dias = (hasta - desde).days + 1
     if numero_dias <= 0:
         return []
     ritmo_diario = max(generador.gamma(4.0, VISITAS_MES_MEDIA / 4), VISITAS_MES_MINIMA) / 30
-    if socio.fecha_baja:
-        factor = _factor_declive(generador, numero_dias)
+    if baja:
+        factor = _factor_declive(generador, (baja - desde).days - np.arange(numero_dias))
     elif generador.random() < PROB_PAUSA:
         factor = _factor_pausa(generador, numero_dias)
     else:
@@ -160,9 +167,8 @@ def _simular_visitas(generador: np.random.Generator, socio: Socio, inicio: date,
     return [Visita(socio.id, desde + _dias(dia)) for dia in np.flatnonzero(vienen)]
 
 
-def _factor_declive(generador: np.random.Generator, numero_dias: int) -> np.ndarray:
+def _factor_declive(generador: np.random.Generator, dias_hasta_baja: np.ndarray) -> np.ndarray:
     """Multiplicador del ritmo de visitas que cae hasta 0 en las semanas previas a la baja."""
-    dias_hasta_baja = np.arange(numero_dias, 0, -1)
     silencio = generador.integers(SILENCIO_MINIMO, SILENCIO_MAXIMO + 1)
     return np.clip((dias_hasta_baja - silencio) / (DIAS_DECLIVE - silencio), 0, 1)
 
