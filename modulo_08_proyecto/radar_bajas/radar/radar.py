@@ -96,7 +96,8 @@ class Radar:
         fecha = fecha or gimnasio.fecha_referencia
         socio = gimnasio.socio(id_socio)
         if not socio.activo_en(fecha):
-            raise DatosNoValidos(f"El socio {id_socio} no estaba dado de alta el {fecha.isoformat()}")
+            raise DatosNoValidos(
+                f"El socio {id_socio} no estaba dado de alta el {fecha.isoformat()}")
         return self.evaluar(socio, gimnasio.visitas_hasta(id_socio, fecha), fecha)
 
     def evaluar_todos(self, gimnasio: Gimnasio, fecha: date | None = None) -> list[Evaluacion]:
@@ -108,4 +109,5 @@ class Radar:
         fecha = fecha or gimnasio.fecha_referencia
         evaluaciones = [self.evaluar(socio, gimnasio.visitas_hasta(socio.id, fecha), fecha)
                         for socio in gimnasio.activos_en(fecha)]
-        return sorted(evaluaciones, key=lambda evaluacion: (-evaluacion.riesgo, evaluacion.socio.id))
+        return sorted(evaluaciones,
+                      key=lambda evaluacion: (-evaluacion.riesgo, evaluacion.socio.id))

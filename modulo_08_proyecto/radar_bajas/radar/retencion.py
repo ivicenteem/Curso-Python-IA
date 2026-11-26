@@ -65,7 +65,8 @@ class GestorRetencion:
         """Registra una acción para un socio en riesgo según su causa principal."""
         id_socio = evaluacion.socio.id
         if not evaluacion.en_riesgo:
-            raise DatosNoValidos(f"El socio {id_socio} no está en riesgo (riesgo {evaluacion.riesgo})")
+            raise DatosNoValidos(
+                f"El socio {id_socio} no está en riesgo (riesgo {evaluacion.riesgo})")
         if self.abierta_de(id_socio):
             raise DatosNoValidos(f"El socio {id_socio} ya tiene una acción abierta")
         accion = AccionRetencion(max(self._acciones, default=0) + 1, id_socio,

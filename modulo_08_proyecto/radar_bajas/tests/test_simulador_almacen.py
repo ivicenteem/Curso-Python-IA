@@ -6,7 +6,7 @@ import pytest
 
 from radar import almacen
 from radar.excepciones import DatosNoValidos, ErrorDeAlmacen
-from radar.modelos import AccionRetencion, Gimnasio, primeros_de_mes
+from radar.modelos import CAMPOS_SOCIO, AccionRetencion, Gimnasio, primeros_de_mes
 from radar.simulador import FECHA_FIN, N_SOCIOS, simular
 
 # --- Simulador ---------------------------------------------------------------
@@ -80,7 +80,7 @@ def test_almacen_ida_y_vuelta(tmp_path, gimnasio, acciones):
 def test_almacen_escribe_csv_legibles(tmp_path, gimnasio):
     almacen.guardar(tmp_path, gimnasio, [])
     lineas = (tmp_path / almacen.FICHERO_SOCIOS).read_text(encoding="utf-8").splitlines()
-    assert lineas[0] == "id,nombre,fecha_alta,tarifa,cuota,cuota_anterior,fecha_cambio_cuota,fecha_baja"
+    assert lineas[0].split(",") == CAMPOS_SOCIO
     assert len(lineas) == N_SOCIOS + 1
     assert (tmp_path / almacen.FICHERO_ACCIONES).read_text(encoding="utf-8").count("\n") == 1
 

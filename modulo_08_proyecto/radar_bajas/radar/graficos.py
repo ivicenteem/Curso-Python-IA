@@ -55,7 +55,7 @@ def grafico_bajas(evolucion: pd.DataFrame) -> Figure:
 
 def grafico_riesgo_tarifa(por_tarifa: pd.DataFrame) -> Figure:
     """Riesgo medio de cada tarifa, a partir de ``analisis.riesgo_por_tarifa``."""
-    textos = por_tarifa["riesgo_medio"].map("{:.1f}".format).tolist()
+    textos = por_tarifa["riesgo_medio"].map("{:.1f}".format).str.replace(".", ",").tolist()
     return _barras("Riesgo medio por tarifa", por_tarifa.index.tolist(),
                    por_tarifa["riesgo_medio"], "Riesgo medio (0 a 100)", textos)
 

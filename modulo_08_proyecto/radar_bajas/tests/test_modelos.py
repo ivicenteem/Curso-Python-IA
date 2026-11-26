@@ -191,7 +191,8 @@ def test_accion_ida_y_vuelta_por_fila():
 
 def test_gimnasio_ordena_y_agrupa_visitas():
     socios = [crear_socio(id=2, nombre="Bea"), crear_socio()]
-    visitas = [Visita(1, date(2026, 2, 3)), Visita(2, date(2026, 2, 1)), Visita(1, date(2026, 2, 1))]
+    visitas = [Visita(1, date(2026, 2, 3)), Visita(2, date(2026, 2, 1)),
+               Visita(1, date(2026, 2, 1))]
     gimnasio = Gimnasio.desde_listas(socios, visitas)
     assert list(gimnasio.socios) == [1, 2]
     assert gimnasio.visitas_por_socio[1] == [date(2026, 2, 1), date(2026, 2, 3)]

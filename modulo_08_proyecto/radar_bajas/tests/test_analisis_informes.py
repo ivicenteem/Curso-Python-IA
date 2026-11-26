@@ -50,7 +50,8 @@ def test_tabla_socios_tipos(gimnasio):
     assert pd.api.types.is_float_dtype(tabla["cuota"])
     for columna in ("fecha_alta", "fecha_cambio_cuota", "fecha_baja"):
         assert pd.api.types.is_datetime64_any_dtype(tabla[columna])
-    assert tabla["fecha_baja"].notna().sum() == sum(not socio.activo for socio in gimnasio.socios.values())
+    bajas = sum(not socio.activo for socio in gimnasio.socios.values())
+    assert tabla["fecha_baja"].notna().sum() == bajas
 
 
 def test_tabla_visitas_tipos(gimnasio):
@@ -107,8 +108,10 @@ def test_causas_en_riesgo_solo_cuenta_los_que_estan_en_riesgo(evaluaciones):
 
 
 def test_eficacia_acciones():
-    tabla = analisis.tabla_acciones([accion(1, "llamada", "retenido"), accion(2, "llamada", "perdido"),
-                                     accion(3, "llamada", "retenido"), accion(4, "descuento", "propuesta")])
+    tabla = analisis.tabla_acciones([
+        accion(1, "llamada", "retenido"), accion(2, "llamada", "perdido"),
+        accion(3, "llamada", "retenido"), accion(4, "descuento", "propuesta"),
+    ])
     eficacia = analisis.eficacia_acciones(tabla)
     assert eficacia.index.tolist() == list(TIPOS_ACCION)
     assert eficacia.loc["llamada", "cerradas"] == 3
@@ -209,7 +212,8 @@ def test_ficha_socio_accion(riesgo, abierta, esperado):
 
 
 def test_listado_acciones():
-    texto = informes.listado_acciones([accion(1, "llamada", "retenido"), accion(2, "descuento", "propuesta")])
+    texto = informes.listado_acciones([accion(1, "llamada", "retenido"),
+                                       accion(2, "descuento", "propuesta")])
     lineas = texto.splitlines()
     assert lineas[2].split() == ["1", "1", "llamada", "retenido", "2026-09-01", "2026-09-02"]
     assert lineas[3].endswith("-")

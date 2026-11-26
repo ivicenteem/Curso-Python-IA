@@ -75,12 +75,14 @@ def test_caida_asistencia_sin_historico():
 
 @pytest.mark.parametrize("dias, intensidad", [(10, 1.0), (105, 0.5), (400, 0.0)])
 def test_antiguedad(dias, intensidad):
-    medida, detalle = AntiguedadBaja(15).medir(socio(fecha_alta=HOY - timedelta(days=dias)), [], HOY)
+    nuevo = socio(fecha_alta=HOY - timedelta(days=dias))
+    medida, detalle = AntiguedadBaja(15).medir(nuevo, [], HOY)
     assert medida == intensidad
     assert detalle == f"socio desde hace {dias} días"
 
 
-@pytest.mark.parametrize("tarifa, intensidad", [("mensual", 1.0), ("trimestral", 0.5), ("anual", 0.1)])
+@pytest.mark.parametrize("tarifa, intensidad",
+                         [("mensual", 1.0), ("trimestral", 0.5), ("anual", 0.1)])
 def test_tipo_tarifa(tarifa, intensidad):
     assert TipoTarifa(10).medir(socio(tarifa=tarifa), [], HOY) == (intensidad, f"tarifa {tarifa}")
 

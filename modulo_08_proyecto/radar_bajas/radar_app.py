@@ -80,7 +80,8 @@ def describir_datos(sesion: Sesion) -> str:
         return "No hay datos: genera datos simulados (1) o carga los guardados (2)."
     gimnasio = sesion.gimnasio
     return (f"{len(gimnasio.socios)} socios, {len(gimnasio.visitas)} visitas y "
-            f"{len(sesion.retencion)} acciones; datos hasta {gimnasio.fecha_referencia.isoformat()}.")
+            f"{len(sesion.retencion)} acciones; "
+            f"datos hasta {gimnasio.fecha_referencia.isoformat()}.")
 
 
 def generar(sesion: Sesion) -> None:

@@ -60,13 +60,14 @@ def tabla_riesgo(evaluaciones: list[Evaluacion], cuantos: int) -> str:
         raise DatosNoValidos(f"El número de socios debe ser al menos 1: {cuantos}")
     cabecera = f"{'ID':>4}  {'RIESGO':>6}  {'NOMBRE':<16}{'TARIFA':<11}MOTIVOS"
     filas = [_fila_riesgo(evaluacion) for evaluacion in evaluaciones[:cuantos]]
-    return "\n".join([cabecera, SEPARADOR, *filas] if filas else [cabecera, SEPARADOR, "(sin socios)"])
+    return "\n".join([cabecera, SEPARADOR, *(filas or ["(sin socios)"])])
 
 
 def _fila_riesgo(evaluacion: Evaluacion) -> str:
     """Una línea de la tabla de riesgo."""
     socio = evaluacion.socio
-    motivos = "; ".join(lectura.detalle for lectura in evaluacion.senales_activas[:MOTIVOS_EN_TABLA])
+    principales = evaluacion.senales_activas[:MOTIVOS_EN_TABLA]
+    motivos = "; ".join(lectura.detalle for lectura in principales)
     alerta = "!" if evaluacion.en_riesgo else " "
     inicio = f"{socio.id:>4}  {evaluacion.riesgo:>5}{alerta}  {_recortar(socio.nombre, 15):<16}" \
              f"{socio.tarifa:<11}"
@@ -78,7 +79,8 @@ def ficha_socio(evaluacion: Evaluacion, accion_abierta: AccionRetencion | None) 
     socio = evaluacion.socio
     lineas = [
         f"Socio {socio.id}: {socio.nombre}",
-        f"Tarifa {socio.tarifa}, {euros(socio.cuota)} al mes, alta el {socio.fecha_alta.isoformat()}",
+        f"Tarifa {socio.tarifa}, {euros(socio.cuota)} al mes, "
+        f"alta el {socio.fecha_alta.isoformat()}",
         "",
         evaluacion.explicacion,
         "",
@@ -94,7 +96,8 @@ def ficha_socio(evaluacion: Evaluacion, accion_abierta: AccionRetencion | None) 
 def _accion_para(evaluacion: Evaluacion, accion_abierta: AccionRetencion | None) -> str:
     """Línea con la acción abierta, la recomendada o el motivo de no proponer ninguna."""
     if accion_abierta:
-        return f"Acción en marcha: n.º {accion_abierta.id}, {accion_abierta.tipo} ({accion_abierta.estado})"
+        return (f"Acción en marcha: n.º {accion_abierta.id}, {accion_abierta.tipo} "
+                f"({accion_abierta.estado})")
     if not evaluacion.en_riesgo:
         return f"Sin acción: el riesgo no llega al umbral ({evaluacion.umbral})"
     return f"Acción recomendada: {recomendar(evaluacion)}"
@@ -117,7 +120,8 @@ def informe_validacion(resultado: ResultadoValidacion) -> str:
     lineas = [
         *_titulo("Validación del radar con el histórico"),
         f"Cortes: {len(resultado.cortes)}, de {cortes}",
-        f"Acierto: el socio avisado se da de baja en los {resultado.horizonte_dias} días siguientes",
+        f"Acierto: el socio avisado se da de baja en los {resultado.horizonte_dias} "
+        "días siguientes",
         f"Umbral de alerta: {resultado.umbral}",
         "",
         f"  {'':<14}{SIN_ALERTA:>12}{ALERTA:>12}",
@@ -132,7 +136,8 @@ def informe_validacion(resultado: ResultadoValidacion) -> str:
         "",
         f"  {'UMBRAL':>6}{'ALERTAS':>10}{'ACIERTOS':>10}{'PRECISIÓN':>12}{'RECALL':>10}",
         *_lineas(_celda(barrido.index, 6), _celda(barrido["alertas"], 10),
-                 _celda(barrido["aciertos"], 10), _celda((100 * barrido["precision"]).map(porcentaje), 12),
+                 _celda(barrido["aciertos"], 10),
+                 _celda((100 * barrido["precision"]).map(porcentaje), 12),
                  _celda((100 * barrido["recall"]).map(porcentaje), 10)),
         "=" * ANCHO,
     ]

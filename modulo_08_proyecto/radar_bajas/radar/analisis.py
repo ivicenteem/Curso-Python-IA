@@ -12,7 +12,8 @@ from datetime import date
 
 import pandas as pd
 
-from .modelos import ESTADOS_ACCION, TARIFAS, TIPOS_ACCION, AccionRetencion, Gimnasio, primeros_de_mes
+from .modelos import (ESTADOS_ACCION, TARIFAS, TIPOS_ACCION, AccionRetencion, Gimnasio,
+                      primeros_de_mes)
 from .radar import Evaluacion
 
 MESES_EVOLUCION = 12
@@ -106,7 +107,8 @@ def eficacia_acciones(acciones: pd.DataFrame) -> pd.DataFrame:
                 .rename_axis(index="tipo", columns=None))
     cerradas = eficacia["retenido"] + eficacia["perdido"]
     eficacia["cerradas"] = cerradas
-    eficacia["tasa_retencion"] = (100 * eficacia["retenido"] / cerradas.where(cerradas > 0)).round(1)
+    tasa = 100 * eficacia["retenido"] / cerradas.where(cerradas > 0)
+    eficacia["tasa_retencion"] = tasa.round(1)
     return eficacia
 
 
@@ -145,4 +147,5 @@ def resumen_direccion(gimnasio: Gimnasio, evaluaciones: list[Evaluacion],
     riesgo = tabla_riesgo(evaluaciones)
     eficacia = eficacia_acciones(tabla_acciones(acciones))
     return ResumenDireccion(gimnasio.fecha_referencia, indicadores(evolucion, riesgo, eficacia),
-                            evolucion, riesgo_por_tarifa(riesgo), causas_en_riesgo(riesgo), eficacia)
+                            evolucion, riesgo_por_tarifa(riesgo), causas_en_riesgo(riesgo),
+                            eficacia)
