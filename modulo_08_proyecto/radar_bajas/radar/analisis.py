@@ -18,7 +18,7 @@ from .radar import Evaluacion
 
 MESES_EVOLUCION = 12
 COLUMNAS_RIESGO = ["id_socio", "nombre", "tarifa", "cuota", "riesgo", "en_riesgo", "causa",
-                   "explicacion"]
+                   "motivos", "explicacion"]
 MINIMO_CERRADAS = 5          # acciones cerradas necesarias para comparar un tipo
 
 
@@ -45,7 +45,8 @@ def tabla_riesgo(evaluaciones: Iterable[Evaluacion]) -> pd.DataFrame:
         [{"id_socio": evaluacion.socio.id, "nombre": evaluacion.socio.nombre,
           "tarifa": evaluacion.socio.tarifa, "cuota": evaluacion.socio.cuota,
           "riesgo": evaluacion.riesgo, "en_riesgo": evaluacion.en_riesgo,
-          "causa": evaluacion.causa_principal, "explicacion": evaluacion.explicacion}
+          "causa": evaluacion.causa_principal, "motivos": evaluacion.motivos,
+          "explicacion": evaluacion.explicacion}
          for evaluacion in evaluaciones],
         columns=COLUMNAS_RIESGO,
     ).astype({"id_socio": int, "cuota": float, "riesgo": int, "en_riesgo": bool})

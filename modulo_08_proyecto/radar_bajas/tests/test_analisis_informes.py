@@ -115,6 +115,8 @@ def test_filtrar_riesgo(evaluaciones, tarifas, minimo):
 def test_tabla_riesgo_incluye_la_explicacion(evaluaciones):
     tabla = analisis.tabla_riesgo(evaluaciones)
     assert tabla.loc[0, "explicacion"] == evaluaciones[0].explicacion
+    assert tabla.loc[0, "motivos"] == evaluaciones[0].motivos
+    assert evaluaciones[0].explicacion.endswith(evaluaciones[0].motivos)
     assert tabla.loc[0, "nombre"] == evaluaciones[0].socio.nombre
 
 

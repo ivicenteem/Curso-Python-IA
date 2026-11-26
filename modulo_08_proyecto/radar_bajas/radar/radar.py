@@ -72,10 +72,15 @@ class Evaluacion:
         return activas[0].senal if activas else None
 
     @property
+    def motivos(self) -> str:
+        """Detalles de las señales activas, por ejemplo "19 días sin venir; asistencia -70 %"."""
+        motivos = "; ".join(lectura.detalle for lectura in self.senales_activas)
+        return motivos or "sin señales de alerta"
+
+    @property
     def explicacion(self) -> str:
         """Texto corto del riesgo, por ejemplo "Riesgo 82: 19 días sin venir; asistencia -70 %"."""
-        motivos = "; ".join(lectura.detalle for lectura in self.senales_activas)
-        return f"Riesgo {self.riesgo}: {motivos or 'sin señales de alerta'}"
+        return f"Riesgo {self.riesgo}: {self.motivos}"
 
 
 class Radar:
