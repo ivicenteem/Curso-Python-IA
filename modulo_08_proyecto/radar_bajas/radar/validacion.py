@@ -12,11 +12,13 @@ import pandas as pd
 
 from .excepciones import DatosNoValidos, SinDatos
 from .modelos import Gimnasio, primeros_de_mes
-from .radar import Radar
+from .radar import Radar, rango_de_fechas
 
 HORIZONTE_DIAS = 30          # se acierta si el socio avisado se va en estos días
 NUMERO_CORTES = 6            # fechas de corte, una al principio de cada mes
 UMBRALES_BARRIDO = (20, 30, 40, 50, 60, 70)
+HORIZONTES_DIAS = (15, 30, 60)            # horizontes que se ofrecen para validar
+CORTES_MINIMO, CORTES_MAXIMO = 3, 10      # número de fechas de corte que se ofrecen
 
 SE_QUEDA, SE_VA = "se queda", "se va"
 SIN_ALERTA, ALERTA = "sin alerta", "alerta"
@@ -63,10 +65,21 @@ def _proporcion(parte: float, total: float) -> float:
 
 
 def cortes_por_defecto(gimnasio: Gimnasio, horizonte_dias: int = HORIZONTE_DIAS,
-                       numero: int = NUMERO_CORTES) -> list[date]:
-    """Primeros de mes cuyo horizonte termina dentro de los datos, los ``numero`` más recientes."""
-    ultimo_corte_posible = gimnasio.fecha_referencia - timedelta(days=horizonte_dias)
-    return primeros_de_mes(ultimo_corte_posible, numero)
+                       numero: int = NUMERO_CORTES, fecha: date | None = None) -> list[date]:
+    """Los ``numero`` primeros de mes más recientes cuyo horizonte termina antes de ``fecha``.
+
+    Sin ``fecha``, se usa la fecha de referencia de los datos. Lanza
+    ``DatosNoValidos`` si el primer corte cae antes de que haya historial suficiente.
+    """
+    fecha = fecha or gimnasio.fecha_referencia
+    cortes = primeros_de_mes(fecha - timedelta(days=horizonte_dias), numero)
+    primera_posible, _ = rango_de_fechas(gimnasio)
+    if cortes[0] < primera_posible:
+        raise DatosNoValidos(
+            f"No hay historial para {numero} cortes con un horizonte de {horizonte_dias} días: "
+            f"el primero sería el {cortes[0].isoformat()} y el historial permite empezar el "
+            f"{primera_posible.isoformat()}")
+    return cortes
 
 
 def tabla_backtest(gimnasio: Gimnasio, radar: Radar, cortes: list[date],
@@ -118,11 +131,11 @@ def barrido_umbrales(tabla: pd.DataFrame, umbrales: tuple[int, ...] = UMBRALES_B
 
 
 def validar(gimnasio: Gimnasio, radar: Radar, horizonte_dias: int = HORIZONTE_DIAS,
-            numero_cortes: int = NUMERO_CORTES) -> ResultadoValidacion:
-    """Hace el backtesting del radar con los datos del gimnasio."""
+            numero_cortes: int = NUMERO_CORTES, fecha: date | None = None) -> ResultadoValidacion:
+    """Hace el backtesting del radar con los datos del gimnasio hasta ``fecha``."""
     if horizonte_dias <= 0 or numero_cortes <= 0:
         raise DatosNoValidos("El horizonte y el número de cortes deben ser positivos")
-    cortes = cortes_por_defecto(gimnasio, horizonte_dias, numero_cortes)
+    cortes = cortes_por_defecto(gimnasio, horizonte_dias, numero_cortes, fecha)
     tabla = tabla_backtest(gimnasio, radar, cortes, horizonte_dias)
     return resultado_desde_tabla(tabla, cortes, horizonte_dias, radar.umbral)
 

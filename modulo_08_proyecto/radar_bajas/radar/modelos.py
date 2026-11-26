@@ -5,7 +5,7 @@ incorrecto. Las conversiones ``a_fila`` y ``desde_fila`` son inversas y son
 lo que se escribe y se lee de los CSV.
 """
 
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right, insort
 from dataclasses import dataclass, field
 from datetime import date
 from functools import cached_property
@@ -115,6 +115,19 @@ class Socio:
     def antiguedad_dias(self, fecha: date) -> int:
         """Días transcurridos desde el alta hasta ``fecha``."""
         return (fecha - self.fecha_alta).days
+
+    def dar_de_baja(self, fecha: date) -> None:
+        """Registra la baja del socio en ``fecha`` si ``comprobar_baja`` lo permite."""
+        self.comprobar_baja(fecha)
+        self.fecha_baja = fecha
+
+    def comprobar_baja(self, fecha: date) -> None:
+        """Lanza ``DatosNoValidos`` si ya estaba de baja o si la fecha es anterior al alta."""
+        if self.fecha_baja:
+            raise DatosNoValidos(
+                f"El socio {self.id} ya está dado de baja desde el {self.fecha_baja.isoformat()}")
+        if fecha < self.fecha_alta:
+            raise DatosNoValidos("La baja no puede ser anterior al alta")
 
     def a_fila(self) -> dict[str, str]:
         """Devuelve el socio como diccionario de cadenas con las claves de ``CAMPOS_SOCIO``."""
@@ -295,17 +308,32 @@ class Gimnasio:
         return agrupadas
 
     @property
+    def fecha_inicio(self) -> date:
+        """Primer día con datos: la primera visita o, si no hay visitas, la primera alta.
+
+        Lanza ``SinDatos`` si el gimnasio está vacío.
+        """
+        self._comprobar_datos()
+        if self.visitas:
+            return min(visita.fecha for visita in self.visitas)
+        return min(socio.fecha_alta for socio in self.socios.values())
+
+    @property
     def fecha_referencia(self) -> date:
         """Último día con datos: la visita o la baja más reciente.
 
         Es el «hoy» con el que se analizan los datos. Lanza ``SinDatos`` si el
         gimnasio está vacío.
         """
-        if self.vacio:
-            raise SinDatos("No hay datos: genera datos simulados o carga una carpeta")
+        self._comprobar_datos()
         fechas_socios = {fecha for socio in self.socios.values()
                          for fecha in (socio.fecha_alta, socio.fecha_baja) if fecha}
         return max(fechas_socios | {visita.fecha for visita in self.visitas})
+
+    def _comprobar_datos(self) -> None:
+        """Lanza ``SinDatos`` si el gimnasio está vacío."""
+        if self.vacio:
+            raise SinDatos("No hay datos: genera datos simulados o carga una carpeta")
 
     def socio(self, id_socio: int) -> Socio:
         """Devuelve el socio con ese identificador o lanza ``SocioNoEncontrado``."""
@@ -322,3 +350,41 @@ class Gimnasio:
     def activos_en(self, fecha: date) -> list[Socio]:
         """Socios dados de alta el día ``fecha``, por identificador."""
         return [socio for socio in self.socios.values() if socio.activo_en(fecha)]
+
+    def dar_de_alta(self, nombre: str, fecha_alta: date, tarifa: str, cuota: float) -> Socio:
+        """Crea un socio con el siguiente identificador libre y lo añade."""
+        socio = Socio(max(self.socios, default=0) + 1, nombre, fecha_alta, tarifa, cuota)
+        self.socios[socio.id] = socio
+        return socio
+
+    def registrar_visita(self, id_socio: int, fecha: date) -> Visita:
+        """Apunta una visita del socio.
+
+        Lanza ``DatosNoValidos`` si el socio no estaba dado de alta ese día o si
+        ya tiene una visita apuntada ese mismo día.
+        """
+        if not self.socio(id_socio).activo_en(fecha):
+            raise DatosNoValidos(
+                f"El socio {id_socio} no estaba dado de alta el {fecha.isoformat()}")
+        if fecha in self.visitas_hasta(id_socio, fecha)[-1:]:
+            raise DatosNoValidos(
+                f"El socio {id_socio} ya tiene una visita el {fecha.isoformat()}")
+        visita = Visita(id_socio, fecha)
+        insort(self.visitas, visita)
+        self.__dict__.pop("visitas_por_socio", None)
+        return visita
+
+    def registrar_baja(self, id_socio: int, fecha: date) -> Socio:
+        """Da de baja al socio en ``fecha``.
+
+        Lanza ``DatosNoValidos`` si tiene visitas ese día o después, además de
+        las reglas de ``Socio.dar_de_baja``.
+        """
+        socio = self.socio(id_socio)
+        socio.comprobar_baja(fecha)
+        fechas = self.visitas_por_socio.get(id_socio, [])
+        if bisect_left(fechas, fecha) < len(fechas):
+            raise DatosNoValidos(
+                f"El socio {id_socio} tiene visitas el {fecha.isoformat()} o después")
+        socio.dar_de_baja(fecha)
+        return socio

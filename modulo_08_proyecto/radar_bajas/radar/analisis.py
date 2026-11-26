@@ -51,6 +51,15 @@ def tabla_riesgo(evaluaciones: Iterable[Evaluacion]) -> pd.DataFrame:
     ).astype({"id_socio": int, "cuota": float, "riesgo": int, "en_riesgo": bool})
 
 
+def visitas_por_mes(gimnasio: Gimnasio, id_socio: int, fecha: date,
+                    meses: int = MESES_EVOLUCION) -> pd.Series:
+    """Visitas del socio en cada uno de los ``meses`` meses que terminan en ``fecha``."""
+    inicio_meses = pd.DatetimeIndex(primeros_de_mes(fecha, meses), name="mes")
+    fechas = pd.to_datetime(pd.Series(gimnasio.visitas_hasta(id_socio, fecha), dtype=object))
+    return (pd.Series(1, index=fechas).resample("MS").sum()
+            .reindex(inicio_meses, fill_value=0).astype(int).rename("visitas"))
+
+
 def tabla_senales(evaluacion: Evaluacion) -> pd.DataFrame:
     """Puntos y detalle de cada señal de una evaluación, indexados por la señal."""
     return pd.DataFrame(
@@ -60,10 +69,18 @@ def tabla_senales(evaluacion: Evaluacion) -> pd.DataFrame:
     ).set_index("senal")
 
 
-def filtrar_riesgo(riesgo: pd.DataFrame, tarifas: Iterable[str],
-                   riesgo_minimo: int = 0) -> pd.DataFrame:
-    """Socios de las tarifas indicadas con al menos ``riesgo_minimo``, de mayor a menor riesgo."""
-    mascara = riesgo["tarifa"].isin(list(tarifas)) & (riesgo["riesgo"] >= riesgo_minimo)
+def filtrar_riesgo(riesgo: pd.DataFrame, tarifas: Iterable[str], riesgo_minimo: int = 0,
+                   texto: str = "") -> pd.DataFrame:
+    """Socios de las tarifas indicadas con al menos ``riesgo_minimo``, de mayor a menor riesgo.
+
+    Si se da ``texto``, solo los socios cuyo nombre lo contiene (sin distinguir
+    mayúsculas) o cuyo número es exactamente ese texto.
+    """
+    texto = texto.strip()
+    coincide = (riesgo["nombre"].str.contains(texto, case=False, regex=False)
+                | (riesgo["id_socio"].astype(str) == texto))
+    mascara = (riesgo["tarifa"].isin(list(tarifas)) & (riesgo["riesgo"] >= riesgo_minimo)
+               & coincide)
     return riesgo[mascara].sort_values(["riesgo", "id_socio"], ascending=[False, True])
 
 
@@ -78,21 +95,29 @@ def tabla_acciones(acciones: Iterable[AccionRetencion]) -> pd.DataFrame:
     )
 
 
-def evolucion_mensual(gimnasio: Gimnasio, meses: int = MESES_EVOLUCION) -> pd.DataFrame:
+def evolucion_mensual(gimnasio: Gimnasio, meses: int = MESES_EVOLUCION,
+                      fecha: date | None = None) -> pd.DataFrame:
     """Socios activos al empezar cada mes, bajas, tasa de abandono (%) y visitas.
 
-    El índice es el primer día de cada mes. La tasa de abandono es el
-    porcentaje de los activos al empezar el mes que se dieron de baja en él.
+    Abarca los ``meses`` meses que terminan en ``fecha`` (por defecto, la fecha
+    de referencia) y no cuenta nada posterior a ella. El índice es el primer
+    día de cada mes. La tasa de abandono es el porcentaje de los activos al
+    empezar el mes que se dieron de baja en él.
     """
-    inicio_meses = pd.DatetimeIndex(primeros_de_mes(gimnasio.fecha_referencia, meses), name="mes")
+    fecha = fecha or gimnasio.fecha_referencia
+    inicio_meses = pd.DatetimeIndex(primeros_de_mes(fecha, meses), name="mes")
     socios = tabla_socios(gimnasio)
+    socios = socios.assign(fecha_baja=socios["fecha_baja"].where(
+        socios["fecha_baja"] <= pd.Timestamp(fecha)))
+    visitas = tabla_visitas(gimnasio)
     altas = socios["fecha_alta"].to_numpy()[:, None]
     bajas = socios["fecha_baja"].to_numpy()[:, None]
     activos = ((altas < inicio_meses.to_numpy()) & ~(bajas <= inicio_meses.to_numpy())).sum(axis=0)
     bajas_por_mes = (socios.dropna(subset=["fecha_baja"])
                      .groupby(pd.Grouper(key="fecha_baja", freq="MS")).size()
                      .reindex(inicio_meses, fill_value=0))
-    visitas_por_mes = (tabla_visitas(gimnasio).set_index("fecha").resample("MS").size()
+    visitas_por_mes = (visitas[visitas["fecha"] <= pd.Timestamp(fecha)]
+                       .set_index("fecha").resample("MS").size()
                        .reindex(inicio_meses, fill_value=0))
     evolucion = pd.DataFrame({"activos": activos, "bajas": bajas_por_mes,
                               "visitas": visitas_por_mes}, index=inicio_meses)
@@ -114,6 +139,17 @@ def riesgo_por_tarifa(riesgo: pd.DataFrame) -> pd.DataFrame:
 def causas_en_riesgo(riesgo: pd.DataFrame) -> pd.Series:
     """Cuántos socios en riesgo tienen cada causa principal, de más a menos."""
     return riesgo.loc[riesgo["en_riesgo"], "causa"].value_counts()
+
+
+def acciones_hasta(acciones: pd.DataFrame, fecha: date) -> pd.DataFrame:
+    """Acciones tal como se conocían en ``fecha``: propuestas antes y sin cierres posteriores.
+
+    Las acciones que se cerraron después de ``fecha`` se dejan fuera, porque ese
+    día todavía no se sabía su resultado.
+    """
+    limite = pd.Timestamp(fecha)
+    conocidas = (acciones["fecha_propuesta"] <= limite) & ~(acciones["fecha_cierre"] > limite)
+    return acciones[conocidas]
 
 
 def eficacia_acciones(acciones: pd.DataFrame) -> pd.DataFrame:
@@ -160,11 +196,17 @@ class ResumenDireccion:
 
 
 def resumen_direccion(gimnasio: Gimnasio, evaluaciones: list[Evaluacion],
-                      acciones: Iterable[AccionRetencion]) -> ResumenDireccion:
-    """Calcula las tablas y los indicadores del informe para la dirección."""
-    evolucion = evolucion_mensual(gimnasio)
+                      acciones: Iterable[AccionRetencion],
+                      fecha: date | None = None) -> ResumenDireccion:
+    """Calcula las tablas y los indicadores del informe para la dirección a ``fecha``.
+
+    Sin ``fecha``, usa la fecha de referencia de los datos. Las evaluaciones
+    deben estar hechas en esa misma fecha.
+    """
+    fecha = fecha or gimnasio.fecha_referencia
+    evolucion = evolucion_mensual(gimnasio, fecha=fecha)
     riesgo = tabla_riesgo(evaluaciones)
-    eficacia = eficacia_acciones(tabla_acciones(acciones))
-    return ResumenDireccion(gimnasio.fecha_referencia, indicadores(evolucion, riesgo, eficacia),
+    eficacia = eficacia_acciones(acciones_hasta(tabla_acciones(acciones), fecha))
+    return ResumenDireccion(fecha, indicadores(evolucion, riesgo, eficacia),
                             evolucion, riesgo_por_tarifa(riesgo), causas_en_riesgo(riesgo),
                             eficacia)

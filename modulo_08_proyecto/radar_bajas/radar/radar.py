@@ -1,12 +1,12 @@
 """El radar: combina las señales en un índice de riesgo de 0 a 100 con su explicación."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from .excepciones import DatosNoValidos
 from .modelos import Gimnasio, Socio
-from .senales import (AntiguedadBaja, CaidaAsistencia, DiasSinVenir, Lectura, Senal,
-                      SubidaCuota, TipoTarifa)
+from .senales import (HISTORICO_MINIMO_DIAS, VENTANA_RECIENTE_DIAS, AntiguedadBaja,
+                      CaidaAsistencia, DiasSinVenir, Lectura, Senal, SubidaCuota, TipoTarifa)
 
 # Puntos máximos de cada señal en el radar por defecto (suman 100)
 PESOS = {
@@ -19,6 +19,30 @@ PESOS = {
 
 # A partir de este riesgo un socio se considera en riesgo de baja
 UMBRAL_RIESGO = 40
+
+# Días de datos necesarios antes de la primera fecha que se puede analizar:
+# el último mes más un mes de historial con el que comparar la asistencia
+DIAS_HISTORIAL_MINIMO = VENTANA_RECIENTE_DIAS + HISTORICO_MINIMO_DIAS
+
+
+def rango_de_fechas(gimnasio: Gimnasio) -> tuple[date, date]:
+    """Primera y última fecha en las que se puede analizar el gimnasio.
+
+    La primera es la del primer dato más ``DIAS_HISTORIAL_MINIMO`` días (sin
+    pasar de la última); la última es la fecha de referencia de los datos.
+    """
+    ultima = gimnasio.fecha_referencia
+    primera = gimnasio.fecha_inicio + timedelta(days=DIAS_HISTORIAL_MINIMO)
+    return min(primera, ultima), ultima
+
+
+def comprobar_fecha(gimnasio: Gimnasio, fecha: date) -> date:
+    """Devuelve ``fecha`` si está en el rango analizable; si no, lanza ``DatosNoValidos``."""
+    primera, ultima = rango_de_fechas(gimnasio)
+    if not primera <= fecha <= ultima:
+        raise DatosNoValidos(f"La fecha de análisis debe estar entre el {primera.isoformat()} "
+                             f"y el {ultima.isoformat()}")
+    return fecha
 
 
 @dataclass(frozen=True)
