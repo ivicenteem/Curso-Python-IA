@@ -31,7 +31,8 @@ VISITAS_REGULARES = cada(3, date(2026, 1, 1), HOY)
 VISITAS_QUE_CAEN = cada(2, date(2026, 1, 1), HOY - timedelta(days=25))
 
 
-@pytest.mark.parametrize("valor, esperado", [(0, 0.0), (7, 0.0), (18.5, 0.5), (30, 1.0), (90, 1.0)])
+@pytest.mark.parametrize("valor, esperado",
+                         [(0, 0.0), (7, 0.0), (18.5, 0.5), (30, 1.0), (90, 1.0)])
 def test_escalar(valor, esperado):
     assert escalar(valor, 7, 30) == esperado
 

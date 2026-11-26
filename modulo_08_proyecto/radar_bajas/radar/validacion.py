@@ -93,7 +93,8 @@ def matriz_confusion(se_va: pd.Series, alerta: pd.Series) -> pd.DataFrame:
     """Tabla 2 × 2 de casos: filas, lo que pasó; columnas, lo que avisó el radar."""
     return (pd.crosstab(se_va, alerta)
             .reindex(index=[False, True], columns=[False, True], fill_value=0)
-            .rename(index={False: SE_QUEDA, True: SE_VA}, columns={False: SIN_ALERTA, True: ALERTA})
+            .rename(index={False: SE_QUEDA, True: SE_VA},
+                    columns={False: SIN_ALERTA, True: ALERTA})
             .rename_axis(index="real", columns="radar"))
 
 
@@ -123,6 +124,16 @@ def validar(gimnasio: Gimnasio, radar: Radar, horizonte_dias: int = HORIZONTE_DI
         raise DatosNoValidos("El horizonte y el número de cortes deben ser positivos")
     cortes = cortes_por_defecto(gimnasio, horizonte_dias, numero_cortes)
     tabla = tabla_backtest(gimnasio, radar, cortes, horizonte_dias)
-    matriz = matriz_confusion(tabla["se_va"], tabla["riesgo"] >= radar.umbral)
-    return ResultadoValidacion(cortes, horizonte_dias, radar.umbral, matriz,
+    return resultado_desde_tabla(tabla, cortes, horizonte_dias, radar.umbral)
+
+
+def resultado_desde_tabla(tabla: pd.DataFrame, cortes: list[date], horizonte_dias: int,
+                          umbral: int) -> ResultadoValidacion:
+    """Resultado de la validación para un umbral a partir de una tabla de backtesting.
+
+    El riesgo de cada caso no depende del umbral, así que la misma tabla sirve
+    para probar umbrales distintos sin volver a evaluar a los socios.
+    """
+    matriz = matriz_confusion(tabla["se_va"], tabla["riesgo"] >= umbral)
+    return ResultadoValidacion(cortes, horizonte_dias, umbral, matriz,
                                calcular_metricas(matriz), barrido_umbrales(tabla))

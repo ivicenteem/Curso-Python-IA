@@ -85,7 +85,8 @@ class DiasSinVenir(Senal):
         """Más días sin venir, más intensidad."""
         ultima = visitas[-1] if visitas else socio.fecha_alta
         dias = (fecha - ultima).days
-        return escalar(dias, DIAS_SIN_VENIR_NORMAL, DIAS_SIN_VENIR_ALARMA), f"{dias} días sin venir"
+        intensidad = escalar(dias, DIAS_SIN_VENIR_NORMAL, DIAS_SIN_VENIR_ALARMA)
+        return intensidad, f"{dias} días sin venir"
 
 
 class CaidaAsistencia(Senal):

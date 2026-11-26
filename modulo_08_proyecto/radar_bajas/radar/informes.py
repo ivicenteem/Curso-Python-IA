@@ -88,12 +88,12 @@ def ficha_socio(evaluacion: Evaluacion, accion_abierta: AccionRetencion | None) 
         *[f"  {lectura.senal:<18}{_numero(lectura.puntos):>6}  {lectura.detalle}"
           for lectura in evaluacion.lecturas],
         "",
-        _accion_para(evaluacion, accion_abierta),
+        accion_para(evaluacion, accion_abierta),
     ]
     return "\n".join(lineas)
 
 
-def _accion_para(evaluacion: Evaluacion, accion_abierta: AccionRetencion | None) -> str:
+def accion_para(evaluacion: Evaluacion, accion_abierta: AccionRetencion | None) -> str:
     """Línea con la acción abierta, la recomendada o el motivo de no proponer ninguna."""
     if accion_abierta:
         return (f"Acción en marcha: n.º {accion_abierta.id}, {accion_abierta.tipo} "

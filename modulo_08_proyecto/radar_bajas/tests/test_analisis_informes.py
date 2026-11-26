@@ -62,8 +62,7 @@ def test_tabla_visitas_tipos(gimnasio):
 
 
 def test_tablas_vacias_mantienen_las_columnas():
-    assert list(analisis.tabla_riesgo([]).columns) == ["id_socio", "tarifa", "cuota", "riesgo",
-                                                       "en_riesgo", "causa"]
+    assert list(analisis.tabla_riesgo([]).columns) == analisis.COLUMNAS_RIESGO
     assert analisis.tabla_acciones([]).empty
 
 
@@ -98,8 +97,32 @@ def test_riesgo_por_tarifa(evaluaciones):
     por_tarifa = analisis.riesgo_por_tarifa(analisis.tabla_riesgo(evaluaciones))
     assert por_tarifa.index.tolist() == list(TARIFAS)
     assert por_tarifa["socios"].sum() == len(evaluaciones)
-    assert por_tarifa["en_riesgo"].sum() == sum(evaluacion.en_riesgo for evaluacion in evaluaciones)
+    en_riesgo = sum(evaluacion.en_riesgo for evaluacion in evaluaciones)
+    assert por_tarifa["en_riesgo"].sum() == en_riesgo
     assert por_tarifa.loc["mensual", "riesgo_medio"] > por_tarifa.loc["anual", "riesgo_medio"]
+
+
+@pytest.mark.parametrize("tarifas, minimo", [(["mensual"], 0), (["anual", "trimestral"], 10),
+                                             (list(TARIFAS), 40)])
+def test_filtrar_riesgo(evaluaciones, tarifas, minimo):
+    filtrada = analisis.filtrar_riesgo(analisis.tabla_riesgo(evaluaciones), tarifas, minimo)
+    esperados = sum(evaluacion.socio.tarifa in tarifas and evaluacion.riesgo >= minimo
+                    for evaluacion in evaluaciones)
+    assert len(filtrada) == esperados
+    assert filtrada["riesgo"].is_monotonic_decreasing
+
+
+def test_tabla_riesgo_incluye_la_explicacion(evaluaciones):
+    tabla = analisis.tabla_riesgo(evaluaciones)
+    assert tabla.loc[0, "explicacion"] == evaluaciones[0].explicacion
+    assert tabla.loc[0, "nombre"] == evaluaciones[0].socio.nombre
+
+
+def test_tabla_senales(evaluaciones):
+    evaluacion = evaluaciones[0]
+    tabla = analisis.tabla_senales(evaluacion)
+    assert tabla.index.tolist() == [lectura.senal for lectura in evaluacion.lecturas]
+    assert tabla["puntos"].sum() == pytest.approx(sum(l.puntos for l in evaluacion.lecturas))
 
 
 def test_causas_en_riesgo_solo_cuenta_los_que_estan_en_riesgo(evaluaciones):

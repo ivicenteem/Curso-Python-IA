@@ -1,0 +1,2 @@
+# Dependencia extra de la interfaz web (el resto está en el requirements.txt de la raíz)
+streamlit>=1.67

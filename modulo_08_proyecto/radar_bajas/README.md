@@ -54,19 +54,43 @@ La carpeta `datos/` trae un ejemplo generado con la semilla 42, así que la apli
 
 Las operaciones se registran en `radar.log`.
 
-Tests:
+### Interfaz web
+
+Además del menú de consola hay una interfaz web hecha con Streamlit. Necesita una dependencia más, que está en el `requirements.txt` de esta carpeta. Desde la raíz del repositorio:
+
+```bash
+pip install -r modulo_08_proyecto/radar_bajas/requirements.txt
+streamlit run modulo_08_proyecto/radar_bajas/web_app.py
+```
+
+Se abre en http://localhost:8501. En la barra lateral se elige el origen de los datos (los guardados en `datos/` o una simulación con la semilla que se quiera), el umbral de riesgo (de 20 a 80, por defecto 40) y la sección:
+
+| Sección | Qué muestra |
+| --- | --- |
+| Resumen para la dirección | Socios activos, socios en riesgo, ingresos en juego al mes y al año y abandono medio; bajas por mes, riesgo medio por tarifa y eficacia de las acciones |
+| Socios en riesgo | Tabla ordenable con filtros por tarifa y riesgo mínimo. Al elegir un socio, su explicación, los puntos de cada señal en un gráfico y la acción recomendada |
+| Validación del modelo | Fechas de corte, matriz de confusión, precisión, recall, tasa base y cuántas veces mejor que el azar, según el umbral elegido; barrido de umbrales en tabla y gráfico |
+| Acciones de retención | Proponer acciones a los socios en riesgo, avanzar su estado con un formulario (las transiciones no permitidas muestran el error), acciones abiertas, eficacia por tipo y guardar en `datos/` |
+
+Igual que el menú, la web solo presenta: todos los cálculos los hace el paquete `radar`. Los datos, el riesgo y el backtesting se guardan en caché (`st.cache_resource` y `st.cache_data`) para no recalcularlos en cada clic, y las acciones de la sesión viven en `st.session_state` hasta que se guardan.
+
+### Tests
 
 ```bash
 pytest modulo_08_proyecto/radar_bajas -v
 ```
 
+Los tests de la web se saltan si Streamlit no está instalado.
+
 ## Arquitectura
 
-Igual que el gestor de incidencias del módulo, la aplicación se organiza en capas. Cada capa solo conoce las que tiene debajo, y solo el menú habla con el usuario.
+Igual que el gestor de incidencias del módulo, la aplicación se organiza en capas. Cada capa solo conoce las que tiene debajo, y solo el menú y la web hablan con el usuario.
 
 ```
 radar_bajas/
 ├── radar_app.py        Menú de consola: el único sitio con input, print y captura de errores
+├── web_app.py          Interfaz web con Streamlit: otra capa de presentación
+├── requirements.txt    Dependencia extra de la web (streamlit)
 ├── conftest.py         Añade esta carpeta a sys.path para los tests
 ├── datos/              CSV de ejemplo (semilla 42) y gráficos exportados
 ├── radar/
@@ -94,7 +118,7 @@ radar_bajas/
 | `almacen` | Convertir entre objetos y CSV | No decide cuándo se guarda |
 | `analisis` y `graficos` | Tablas, indicadores y figuras | No modifican los datos; no imprimen |
 | `informes` | Construir textos | No imprime |
-| `radar_app` | Pedir datos, mostrar resultados y capturar errores | No tiene reglas de negocio |
+| `radar_app` y `web_app` | Pedir datos, mostrar resultados y capturar errores | No tienen reglas de negocio |
 
 ## Cómo se calcula el riesgo
 
@@ -199,14 +223,15 @@ Con los datos de ejemplo, a 31/10/2026:
 
 ## Tests
 
-167 tests repartidos por capa, con fixtures (un gimnasio simulado con semilla fija que comparte toda la sesión) y `parametrize`. Cubren:
+183 tests repartidos por capa, con fixtures (un gimnasio simulado con semilla fija que comparte toda la sesión) y `parametrize`. Cubren:
 
 - las reglas de los modelos y las transiciones;
 - cada señal por separado, el riesgo y la explicación;
 - la validación y la retención;
 - el simulador y el almacén (ida y vuelta CSV con `tmp_path`, columnas que faltan, fila no válida con su línea);
 - el análisis, los gráficos y los informes;
-- el menú completo con `monkeypatch` de `input`.
+- el menú completo con `monkeypatch` de `input`;
+- la web con `streamlit.testing.v1.AppTest`: arranca, dibuja cada sección, el umbral cambia los socios en riesgo y una transición no permitida muestra un error.
 
 ## Limitaciones y mejoras
 

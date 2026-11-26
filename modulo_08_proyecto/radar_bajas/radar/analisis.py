@@ -17,6 +17,8 @@ from .modelos import (ESTADOS_ACCION, TARIFAS, TIPOS_ACCION, AccionRetencion, Gi
 from .radar import Evaluacion
 
 MESES_EVOLUCION = 12
+COLUMNAS_RIESGO = ["id_socio", "nombre", "tarifa", "cuota", "riesgo", "en_riesgo", "causa",
+                   "explicacion"]
 MINIMO_CERRADAS = 5          # acciones cerradas necesarias para comparar un tipo
 
 
@@ -38,14 +40,31 @@ def tabla_visitas(gimnasio: Gimnasio) -> pd.DataFrame:
 
 
 def tabla_riesgo(evaluaciones: Iterable[Evaluacion]) -> pd.DataFrame:
-    """Una fila por socio evaluado con su riesgo, su causa principal y su cuota."""
+    """Una fila por socio evaluado: riesgo, causa principal, cuota y explicación."""
     return pd.DataFrame(
-        [{"id_socio": evaluacion.socio.id, "tarifa": evaluacion.socio.tarifa,
-          "cuota": evaluacion.socio.cuota, "riesgo": evaluacion.riesgo,
-          "en_riesgo": evaluacion.en_riesgo, "causa": evaluacion.causa_principal}
+        [{"id_socio": evaluacion.socio.id, "nombre": evaluacion.socio.nombre,
+          "tarifa": evaluacion.socio.tarifa, "cuota": evaluacion.socio.cuota,
+          "riesgo": evaluacion.riesgo, "en_riesgo": evaluacion.en_riesgo,
+          "causa": evaluacion.causa_principal, "explicacion": evaluacion.explicacion}
          for evaluacion in evaluaciones],
-        columns=["id_socio", "tarifa", "cuota", "riesgo", "en_riesgo", "causa"],
+        columns=COLUMNAS_RIESGO,
     ).astype({"id_socio": int, "cuota": float, "riesgo": int, "en_riesgo": bool})
+
+
+def tabla_senales(evaluacion: Evaluacion) -> pd.DataFrame:
+    """Puntos y detalle de cada señal de una evaluación, indexados por la señal."""
+    return pd.DataFrame(
+        [{"senal": lectura.senal, "puntos": lectura.puntos, "detalle": lectura.detalle}
+         for lectura in evaluacion.lecturas],
+        columns=["senal", "puntos", "detalle"],
+    ).set_index("senal")
+
+
+def filtrar_riesgo(riesgo: pd.DataFrame, tarifas: Iterable[str],
+                   riesgo_minimo: int = 0) -> pd.DataFrame:
+    """Socios de las tarifas indicadas con al menos ``riesgo_minimo``, de mayor a menor riesgo."""
+    mascara = riesgo["tarifa"].isin(list(tarifas)) & (riesgo["riesgo"] >= riesgo_minimo)
+    return riesgo[mascara].sort_values(["riesgo", "id_socio"], ascending=[False, True])
 
 
 def tabla_acciones(acciones: Iterable[AccionRetencion]) -> pd.DataFrame:

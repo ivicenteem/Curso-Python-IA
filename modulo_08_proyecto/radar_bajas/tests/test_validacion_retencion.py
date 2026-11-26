@@ -12,7 +12,8 @@ from radar.retencion import ACCION_POR_CAUSA, GestorRetencion, recomendar
 from radar.senales import Lectura
 from radar.simulador import simular_acciones
 from radar.validacion import (ALERTA, SE_QUEDA, SE_VA, SIN_ALERTA, calcular_metricas,
-                              cortes_por_defecto, matriz_confusion, tabla_backtest, validar)
+                              cortes_por_defecto, matriz_confusion, resultado_desde_tabla,
+                              tabla_backtest, validar)
 
 HOY = date(2026, 10, 31)
 
@@ -93,6 +94,18 @@ def test_barrido_umbral_mas_alto_menos_alertas_y_menos_recall(resultado):
     assert fila["precision"] == resultado.metricas.precision
 
 
+def test_resultado_desde_tabla_cambia_con_el_umbral(gimnasio, resultado):
+    radar = Radar.por_defecto()
+    cortes = resultado.cortes
+    tabla = tabla_backtest(gimnasio, radar, cortes)
+    igual = resultado_desde_tabla(tabla, cortes, 30, radar.umbral)
+    pd.testing.assert_frame_equal(igual.matriz, resultado.matriz)
+    bajo = resultado_desde_tabla(tabla, cortes, 30, 20)
+    assert bajo.umbral == 20
+    assert bajo.metricas.alertas == resultado.barrido.loc[20, "alertas"]
+    assert bajo.metricas.alertas > resultado.metricas.alertas
+
+
 @pytest.mark.parametrize("horizonte, cortes", [(0, 6), (30, 0)])
 def test_validar_parametros_no_validos(gimnasio, horizonte, cortes):
     with pytest.raises(DatosNoValidos):
@@ -135,7 +148,8 @@ def test_proponer_rechaza_socio_sin_riesgo_o_con_accion_abierta():
 def test_proponer_en_riesgo_omite_sin_riesgo_y_con_accion_abierta():
     gestor = GestorRetencion()
     gestor.proponer(evaluacion(1), HOY)
-    nuevas = gestor.proponer_en_riesgo([evaluacion(1), evaluacion(2), evaluacion(3, riesgo=5)], HOY)
+    candidatas = [evaluacion(1), evaluacion(2), evaluacion(3, riesgo=5)]
+    nuevas = gestor.proponer_en_riesgo(candidatas, HOY)
     assert [accion.id_socio for accion in nuevas] == [2]
     assert [accion.id for accion in gestor.acciones] == [1, 2]
 
