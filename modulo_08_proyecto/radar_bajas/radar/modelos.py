@@ -32,6 +32,13 @@ CAMPOS_VISITA = ["id_socio", "fecha"]
 CAMPOS_ACCION = ["id", "id_socio", "tipo", "fecha_propuesta", "estado", "fecha_cierre"]
 
 
+def primeros_de_mes(fin: date, meses: int) -> list[date]:
+    """Primer día de cada uno de los ``meses`` meses que terminan en el mes de ``fin``."""
+    indice_fin = fin.year * 12 + fin.month - 1
+    return [date(indice // 12, indice % 12 + 1, 1)
+            for indice in range(indice_fin - meses + 1, indice_fin + 1)]
+
+
 def _a_texto(fecha: date | None) -> str:
     """Convierte una fecha opcional en texto ISO; ``None`` es la cadena vacía."""
     return fecha.isoformat() if fecha else ""

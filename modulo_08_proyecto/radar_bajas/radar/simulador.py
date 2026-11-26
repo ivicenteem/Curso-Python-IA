@@ -10,6 +10,10 @@ gimnasio real:
   semanas antes de irse.
 - Algunos socios fieles hacen una pausa (vacaciones, una lesión) y vuelven:
   son las falsas alarmas que cualquier modelo tiene que soportar.
+
+``simular_acciones`` añade un histórico de acciones de retención: cada mes se
+propone una acción a los socios en riesgo y su resultado sale de los propios
+datos (perdido si el socio se dio de baja poco después, retenido si no).
 """
 
 from dataclasses import replace
@@ -18,7 +22,9 @@ from datetime import date, timedelta
 import numpy as np
 
 from .excepciones import DatosNoValidos
-from .modelos import TARIFAS, Gimnasio, Socio, Visita
+from .modelos import TARIFAS, AccionRetencion, Gimnasio, Socio, Visita, primeros_de_mes
+from .radar import Radar
+from .retencion import GestorRetencion
 
 SEMILLA = 42
 N_SOCIOS = 300
@@ -47,6 +53,11 @@ SILENCIO_MINIMO, SILENCIO_MAXIMO = 7, 25
 PROB_PAUSA = 0.15
 PAUSA_MINIMA, PAUSA_MAXIMA = 10, 25
 
+MESES_CON_ACCIONES = 5
+DIAS_HASTA_CONTACTO = 3
+DIAS_HASTA_RETENCION = 30          # sin baja en este plazo, el socio cuenta como retenido
+DIAS_SEGUIMIENTO = 60              # una baja dentro de este plazo cuenta como perdido
+
 NOMBRES = ("Lucía", "Hugo", "Martina", "Mateo", "Sofía", "Leo", "Julia", "Daniel", "Paula",
            "Álvaro", "Valeria", "Pablo", "Emma", "Manuel", "Carmen", "Javier", "Irene", "Diego",
            "Elena", "Adrián", "Nerea", "Iñaki", "Ainhoa", "Marcos", "Laura", "Sergio")
@@ -67,13 +78,6 @@ def simular(n_socios: int = N_SOCIOS, *, fin: date = FECHA_FIN, meses: int = MES
     visitas = [visita for socio in socios
                for visita in _simular_visitas(generador, socio, meses_simulados[0], fin)]
     return Gimnasio.desde_listas(socios, visitas)
-
-
-def primeros_de_mes(fin: date, meses: int) -> list[date]:
-    """Primer día de cada uno de los ``meses`` meses que terminan en el mes de ``fin``."""
-    indice_fin = fin.year * 12 + fin.month - 1
-    return [date(indice // 12, indice % 12 + 1, 1)
-            for indice in range(indice_fin - meses + 1, indice_fin + 1)]
 
 
 def _dias(numero: int | np.integer) -> timedelta:
@@ -170,3 +174,28 @@ def _factor_pausa(generador: np.random.Generator, numero_dias: int) -> np.ndarra
     factor = np.ones(numero_dias)
     factor[comienzo:comienzo + duracion] = 0
     return factor
+
+
+def simular_acciones(gimnasio: Gimnasio, radar: Radar,
+                     meses: int = MESES_CON_ACCIONES) -> GestorRetencion:
+    """Genera el histórico de acciones de retención de los últimos ``meses`` meses."""
+    gestor = GestorRetencion()
+    fin = gimnasio.fecha_referencia
+    for corte in primeros_de_mes(fin - _dias(DIAS_HASTA_RETENCION), meses):
+        for accion in gestor.proponer_en_riesgo(radar.evaluar_todos(gimnasio, corte), corte):
+            _resolver(gestor, accion, gimnasio.socio(accion.id_socio))
+    return gestor
+
+
+def _resolver(gestor: GestorRetencion, accion: AccionRetencion, socio: Socio) -> None:
+    """Lleva la acción a su estado final según lo que hizo el socio después."""
+    propuesta = accion.fecha_propuesta
+    baja = socio.fecha_baja
+    perdido = baja is not None and baja <= propuesta + _dias(DIAS_SEGUIMIENTO)
+    contacto = propuesta + _dias(DIAS_HASTA_CONTACTO)
+    if not (perdido and baja <= contacto):
+        gestor.avanzar(accion.id, "contactado", contacto)
+    if perdido:
+        gestor.avanzar(accion.id, "perdido", baja)
+    else:
+        gestor.avanzar(accion.id, "retenido", propuesta + _dias(DIAS_HASTA_RETENCION))
