@@ -1,6 +1,6 @@
 # Entrega del proyecto final: Radar de Bajas
 
-- **Nombre y apellidos:**
+- **Nombre y apellidos:** Iñaki Vicente Marchante
 - **Fecha:** 26/11/2026
 
 ## Estado
@@ -41,7 +41,7 @@ Para probarlas: `cd modulo_08_proyecto/radar_bajas`, `python radar_app.py` y las
 
 ## Dificultades encontradas
 
-- **Que el simulador fuera realista.** Al principio solo generaba bajas hasta el último día de los datos, así que en la fecha actual nadie estaba dejando de venir y el radar casi no tenía nada que detectar. Lo resolví simulando también las bajas de los dos meses siguientes sin guardarlas: su declive ya aparece en las visitas.
-- **Validar con pocos casos.** Con una sola fecha de corte salían unas diez bajas y las métricas cambiaban mucho de una semilla a otra. Usar seis cortes mensuales lo estabilizó.
-- **Evitar fugas del futuro en la validación.** Al evaluar una fecha pasada hay que quitar las visitas posteriores y no contar una subida de cuota que aún no había ocurrido.
-- **Tablas de texto sin recorrer el `DataFrame` fila a fila.** Las compuse con operaciones de columna (`.str.rjust` y concatenación de columnas).
+- **Que los datos simulados fueran realistas.** Al principio el radar casi no detectaba a nadie en la fecha actual, porque el simulador solo generaba bajas hasta el último día. Lo arreglé simulando también las bajas de los dos meses siguientes, sin guardarlas, para que ya se notara que esos socios iban menos.
+- **Que las métricas fueran fiables.** Validando con una sola fecha salían muy pocas bajas y los resultados cambiaban mucho según la semilla. Con seis fechas de corte (una por mes) los resultados se estabilizaron.
+- **No hacer trampa en la validación.** Al evaluar una fecha pasada solo se puede usar lo que se sabía ese día: hay que ignorar las visitas y las subidas de cuota posteriores.
+- **Hacer las tablas de texto sin recorrer el DataFrame fila a fila.** Alineé cada columna entera con `.str.rjust` y `.str.ljust` y luego las uní sumándolas.
